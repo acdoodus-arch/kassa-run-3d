@@ -1,0 +1,24 @@
+# One small VPS is enough:  docker compose up -d --build
+services:
+  kassa:
+    build: ..
+    restart: unless-stopped
+    environment:
+      KASSA_ADMIN_PASSWORD: ${KASSA_ADMIN_PASSWORD:?set it in .env}
+      KASSA_TRUST_PROXY: "1"
+      # CEYLON_FIREBASE_PROJECT: your-firebase-project-id     # enable shared bus-game accounts (docs/INTEGRATION.md)
+    volumes:
+      - kassa-data:/app/data
+  caddy:                      # automatic HTTPS certificates + WebSocket proxying
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set it in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [kassa]
+volumes:
+  kassa-data:
+  caddy-data:

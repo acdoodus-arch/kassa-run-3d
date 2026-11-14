@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kassa Run 3D — Admin</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;font-family:system-ui,"Noto Sans Sinhala",sans-serif;background:#14101f;color:#eee;padding:16px}
+h1{margin:0 0 4px;font-size:22px}h2{font-size:15px;margin:22px 0 8px;color:#ffd23f}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.k{background:#241b3a;border:1px solid #3a2d5c;border-radius:12px;padding:10px}.k b{display:block;font-size:26px;color:#fff}.k span{font-size:12px;opacity:.7}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:4px 8px;border-bottom:1px solid #2e2548;text-align:left}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+input,button{font:inherit;padding:8px 12px;border-radius:8px;border:1px solid #555;background:#241b3a;color:#fff}button{cursor:pointer;background:#ffd23f;color:#222;font-weight:700;border:0}
+#login{max-width:340px;margin:20vh auto;text-align:center}
+.bars{display:flex;align-items:flex-end;gap:4px;height:110px}.bar{flex:1;background:#5de0cf;border-radius:3px 3px 0 0;position:relative;min-height:2px}.bar i{position:absolute;bottom:-18px;left:0;right:0;font-size:9px;text-align:center;font-style:normal;opacity:.6}
+.err{color:#ff8a8a;font-size:12px}.mut{opacity:.6;font-size:12px}
+</style></head><body>
+<div id="login"><h1>Kassa Run 3D · Admin</h1><p class="mut">Separate from player accounts.</p><input id="pw" type="password" placeholder="Admin password"><br><br><button id="go">Sign in</button><div id="le" class="err"></div></div>
+<div id="app" style="display:none">
+<h1>Kassa Run 3D — Admin <button id="out" style="float:right;background:#444;color:#fff">Sign out</button></h1><div class="mut" id="upd"></div>
+<h2>Live</h2><div class="grid" id="live"></div>
+<h2>Overview</h2><div class="grid" id="over"></div>
+<h2>Daily activity (14 days)</h2><div class="bars" id="bars"></div><div class="mut" style="margin-top:22px">Bars = games played per day; hover for players.</div>
+<div class="cols">
+<div><h2>Mode usage</h2><table id="modes"></table><h2>Today's daily challenge</h2><div id="daily" class="mut"></div></div>
+<div><h2>Today's best Kassa</h2><table id="b1"></table><h2>Best Raja catchers (today)</h2><table id="b2"></table></div>
+<div><h2>Weekly champions</h2><table id="b3"></table><h2>All-time</h2><table id="b4"></table></div>
+<div><h2>Fastest escapes</h2><table id="b5"></table><h2>Most MP wins</h2><table id="b6"></table></div>
+</div>
+<h2>Errors &amp; failed sessions</h2><div class="mut" id="errsum"></div><table id="errs"></table>
+</div>
+<script>
+const $=id=>document.getElementById(id);let tok=null;try{tok=sessionStorage.getItem('kat')}catch(e){}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mm=s=>s?Math.floor(s/60)+'m '+Math.round(s%60)+'s':'—';
+async function login(){const r=await fetch('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:$('pw').value})});const j=await r.json();if(j.token){tok=j.token;try{sessionStorage.setItem('kat',tok)}catch(e){}start()}else $('le').textContent=j.error==='locked'?'Too many attempts. Wait 10 minutes.':'Wrong password'}
+$('go').onclick=login;$('pw').onkeydown=e=>{if(e.key==='Enter')login()};
+$('out').onclick=()=>{try{sessionStorage.removeItem('kat')}catch(e){}location.reload()};
+const k=(v,l)=>`<div class="k"><b>${v}</b><span>${l}</span></div>`;
+const board=(id,rows,t)=>$(id).innerHTML=(rows.length?rows:[{name:'—',val:''}]).map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.name)}</td><td>${t?mm(r.val):esc(Math.round(r.val)||r.val)}</td></tr>`).join('');
+async function load(){const r=await fetch('/api/admin/stats',{headers:{'X-Admin-Token':tok}});if(r.status===401){try{sessionStorage.removeItem('kat')}catch(e){}$('app').style.display='none';$('login').style.display='block';return}
+const s=await r.json();$('login').style.display='none';$('app').style.display='block';$('upd').textContent='Updated '+new Date().toLocaleTimeString();
+$('live').innerHTML=k(s.active_games,'Active multiplayer games')+k(s.open_rooms,'Open rooms')+k(s.connected_players,'Players in rooms')+k(s.solo_in_progress,'Solo runs in progress');
+$('over').innerHTML=k(s.total_players,'Total players')+k(s.players_today,'Players today')+k(s.players_week,'Players (7d)')+k(s.returning_players,'Returning players')+k(s.solo_games,'Solo games')+k(s.mp_matches,'MP matches')+k(s.mp_rounds,'MP rounds')+k(mm(s.avg_session_sec),'Avg session')+k(s.popular_mode,'Most popular mode')+k(s.errors_today,'Errors (24h)')+k(s.failed_sessions,'Forfeits today');
+const mx=Math.max(1,...s.daily.map(d=>d.games));$('bars').innerHTML=s.daily.map(d=>`<div class="bar" title="${d.day}: ${d.games} games, ${d.players} players" style="height:${d.games/mx*100}%"><i>${d.day.slice(8)}</i></div>`).join('');
+$('modes').innerHTML=Object.entries(s.modes).map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+const dc=s.daily_challenge;$('daily').textContent=dc.day+' · seed '+dc.seed+' · modifiers: '+dc.mods.join(', ')+(dc.season?' · season '+dc.season.id:'');
+board('b1',s.boards.kassa_today);board('b2',s.boards.raja_today);board('b3',s.boards.weekly);board('b4',s.boards.alltime);board('b5',s.boards.fastest,1);board('b6',s.boards.mpwins);
+$('errsum').textContent=s.errors.length+' recent error(s) shown';$('errs').innerHTML=s.errors.map(e=>`<tr><td>${new Date(e.ts*1000).toLocaleString()}</td><td>${esc(e.msg)}</td><td class="mut">${esc((e.ctx||'').slice(0,120))}</td></tr>`).join('')}
+function start(){load();setInterval(load,5000)}
+if(tok)start();
+</script></body></html>

@@ -1,0 +1,6 @@
+.netlify
+data/
+netlify-site/
+kassa-deploy.zip
+__pycache__/
+*.pyc

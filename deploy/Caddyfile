@@ -1,0 +1,4 @@
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy kassa:8080
+}

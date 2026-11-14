@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: kassa-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/daily
+    envVars:
+      - key: KASSA_TRUST_PROXY
+        value: "1"
+      - key: KASSA_ALLOW_ORIGIN
+        value: https://kassa.ceylongames.com,https://ceylongames-kassa.netlify.app
+      - key: CEYLON_FIREBASE_PROJECT
+        value: kayal-super-line
+      - key: KASSA_ADMIN_PASSWORD
+        generateValue: true

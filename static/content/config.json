@@ -1,0 +1,196 @@
+{
+  "_comment": "Edit this file (no rebuild needed) to add skins, seasonal modifiers and dialogue. Maps live in content/maps/*.json.",
+  "version": 1,
+  "defaultMap": "hillcountry",
+  "skins": [
+    {
+      "id": "classic",
+      "name": "ක්ලැසික් කස්සා",
+      "req": null,
+      "cap": "#ffd23f",
+      "shirt": "#ff7a1a",
+      "shorts": "#1fa89a"
+    },
+    {
+      "id": "cool",
+      "name": "කූල් කස්සා",
+      "req": "first_escape",
+      "cap": "#3aa0ff",
+      "shirt": "#e63b7a",
+      "shorts": "#2b2f77"
+    },
+    {
+      "id": "tuk",
+      "name": "ටුක් ටුක් කස්සා",
+      "req": "ten_escapes",
+      "cap": "#f2f2f2",
+      "shirt": "#ffd23f",
+      "shorts": "#1d6b3a"
+    },
+    {
+      "id": "gold",
+      "name": "රන් කස්සා",
+      "req": "speedrunner",
+      "cap": "#ffd700",
+      "shirt": "#ffcf33",
+      "shorts": "#b8860b"
+    }
+  ],
+  "modifiers": {
+    "rain": {
+      "title": "වැස්ස 🌧️",
+      "desc": "Rain and fog — shorter sight lines for everyone."
+    },
+    "rush": {
+      "title": "ඉක්මන් ට්‍රැෆික් 🚌",
+      "desc": "Twice the traffic. Cross carefully!"
+    },
+    "angry": {
+      "title": "කෝපාවිෂ්ට රජා 😤",
+      "desc": "Raja runs 10% faster."
+    },
+    "dusk": {
+      "title": "සවස් කාලය 🌇",
+      "desc": "Golden-hour lighting, glowing hotel."
+    },
+    "festival": {
+      "title": "උත්සව දිනය 🎉",
+      "desc": "Bunting and bigger crowds."
+    },
+    "night": {
+      "title": "රාත්‍රිය 🌙",
+      "desc": "Dark city, glowing windows. Raja sees less — and so do you."
+    },
+    "fog": {
+      "title": "මීදුම 🌫️",
+      "desc": "Thick fog: short sight lines for everyone."
+    }
+  },
+  "seasons": [
+    {
+      "id": "avurudu",
+      "name": "අවුරුදු සැණකෙළි",
+      "from": "04-08",
+      "to": "04-18",
+      "modifiers": [
+        "festival"
+      ],
+      "bunting": true
+    },
+    {
+      "id": "monsoon",
+      "name": "මෝසම් වැස්ස",
+      "from": "10-15",
+      "to": "11-30",
+      "modifiers": [
+        "rain"
+      ]
+    },
+    {
+      "id": "xmas",
+      "name": "නත්තල් උත්සවය",
+      "from": "12-15",
+      "to": "12-31",
+      "modifiers": [
+        "dusk",
+        "festival"
+      ],
+      "bunting": true
+    }
+  ],
+  "dialogue": {
+    "rajaComing": [
+      "අයියෝ! රජා එනවා!"
+    ],
+    "nearHotel": [
+      "හෝටලේ තව ටිකයි!",
+      "හෝටලේ ඔන්න පේනවා!"
+    ],
+    "badDay": [
+      "අද නම් වැඩේ හරි යන්නේ නෑ!",
+      "අම්මෝ! මේක නම් වදයක්!"
+    ],
+    "taunt": [
+      "කොහෙද දුවන්නේ?",
+      "මම ඔයාව අල්ලනවා!",
+      "එහෙම යන්න බෑ!"
+    ],
+    "hide": [
+      "ඉක්මනට හැංගෙන්න!",
+      "ඉන්න, හෙමීට හෙමීට...",
+      "මෙතන ආරක්ෂිතයි"
+    ],
+    "panic": [
+      "දුවන්න දුවන්න!",
+      "අම්මෝ!",
+      "ටිකක් ඉන්න!"
+    ],
+    "rajaSearch": [
+      "කෝ මේ කස්සා?",
+      "මෙතන කොහේ හරි ඉන්නවා!",
+      "ඇහුණා... මොකක්ද ඒ?"
+    ],
+    "rajaSpot": [
+      "ඔන්න පේනවා!",
+      "හා! මෙහෙ ඉන්නවා!"
+    ],
+    "reporter": [
+      "කැමරාව! පැන ගන්න!",
+      "රිපෝටර්ට අහු වුණා!"
+    ],
+    "guard": [
+      "ආරක්ෂකයා බලනවා!",
+      "ඔහොම බෑ අයියේ!"
+    ],
+    "vehicle": [
+      "බස් එකට පරිස්සම්!",
+      "ටුක් ටුක් එකක් එනවා!"
+    ],
+    "caught": [
+      "අයියෝ! කස්සා අහු වුණා!"
+    ],
+    "win": [
+      "හෝටලේට පැන්නා! සුපිරි!"
+    ],
+    "jam": [
+      "ට්‍රැෆික් ජෑම්! වෙන පාරක් හොයන්න!"
+    ],
+    "crowd": [
+      "සෙනඟ එකතු වෙනවා! පාර වහලා!"
+    ],
+    "rajaPop": [
+      "අම්මෝ! රජා පැන්නා!",
+      "බූ! මම මෙතන!",
+      "අහු වුණා නේද?"
+    ],
+    "ambushWarn": [
+      "ඇහුණා… කවුරුහරි ඉන්නවා! පරිස්සම්!",
+      "ඒ මොකක්ද සැඟවිලා? පරිස්සම්!"
+    ],
+    "seekerSpot": [
+      "ඔන්න කස්සා!",
+      "මෙහෙ ඉන්නවා! රජාට කියන්න!",
+      "අල්ලන්න අල්ලන්න!"
+    ]
+  },
+  "resultTitles": {
+    "kassaWin": "අද හෝටලේට පැනගත්ත වේගවත්ම කස්සා!",
+    "rajaWin": "අද කස්සාව අල්ලපු සුපිරි රජා!",
+    "kassaLose": "කස්සා අද නම් අහු වුණා!",
+    "rajaLose": "කස්සා හෝටලේට පැන්නා!"
+  },
+  "maps": [
+    {
+      "id": "hillcountry",
+      "name": "🏞️ කඳුකරය"
+    },
+    {
+      "id": "riverside",
+      "name": "🌉 ගංගා නගරය"
+    },
+    {
+      "id": "colombo",
+      "name": "🏖️ කොළඹ වෙරළ"
+    }
+  ]
+}

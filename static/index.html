@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="si">
+<head>
+<meta charset="utf-8">
+<title>කස්සා Run 3D — Ceylon Games</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2a0f4d">
+<meta property="og:title" content="කස්සා Run 3D — හෝටලයට පැනගමු!">
+<meta property="og:description" content="Ceylon Games presents a funny 3D Colombo chase game. Play solo or chase your friends online!">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;700;800&family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<!-- ============ LOADING ============ -->
+<div id="loading" class="scr on">
+  <div class="logo big">කස්සා <b>RUN</b> <i>3D</i></div>
+  <div class="sub">Ceylon Games</div>
+  <div class="bar"><div id="loadFill"></div></div>
+  <div id="loadTip" class="tip">කොළඹ හදනවා…</div>
+</div>
+
+<!-- ============ MAIN MENU ============ -->
+<div id="menu" class="scr">
+  <div class="menuwrap">
+    <div class="logo">කස්සා <b>RUN</b> <i>3D</i></div>
+    <div class="tag">හෝටලයට පැනගමු! 🏨 — <span>Ceylon Games</span></div>
+    <div class="idchip" id="idChip"><span id="idAvatar">🏃</span><b id="idName">…</b><button id="idEdit" class="mini" title="නම වෙනස් කරන්න">✎</button></div>
+    <div class="mbtns">
+      <button id="bSolo" class="btn yellow">🏃 තනි ක්‍රීඩාව <small>Solo Escape — රජාගෙන් බේරෙන්න</small></button>
+      <button id="bOnline" class="btn pink">🌐 ඔන්ලයින් Chase <small>මිතුරන් සමඟ — කස්සා vs රජා</small></button>
+      <button id="bDaily" class="btn teal">📅 දෛනික අභියෝගය <small id="dailySub">අද වෙනස් නීති!</small></button>
+      <div class="row2">
+        <button id="bLb" class="btn small">🏆 ලකුණු</button>
+        <button id="bProfile" class="btn small">👤 ප්‍රොෆයිල්</button>
+        <button id="bHow" class="btn small">❓ උදව්</button>
+        <button id="bSet" class="btn small">⚙️</button>
+      </div>
+    </div>
+    <div class="foot">© Ceylon Games · <a href="/admin" class="adm">admin</a></div>
+  </div>
+</div>
+
+<!-- ============ PANELS ============ -->
+<div id="pName" class="scr panelbg">
+  <div class="panel">
+    <h2>ඔබේ නම? 👋</h2>
+    <p class="muted">මිතුරන්ට පෙන්වන නම (2–16 අකුරු). මෙම බ්‍රව්සරයේ ඔබේ ලකුණු රැඳෙනවා.</p>
+    <input id="nameIn" maxlength="16" placeholder="උදා: Kassa_Malli" autocomplete="off">
+    <div id="nameErr" class="err"></div>
+    <div class="btnrow"><button id="nameOk" class="btn yellow">ඉදිරියට →</button><button id="nameCancel" class="btn small">අවලංගු</button></div>
+    <div id="ceyBox" style="margin-top:14px;border-top:1px solid rgba(255,255,255,.25);padding-top:10px">
+      <b>🚌 Ceylon My Bus ගිණුමෙන් පිවිසෙන්න</b>
+      <p class="muted" style="margin:4px 0">බස් ක්‍රීඩාවේ username / password එකම — නැවත ලියාපදිංචි විය යුතු නැහැ.</p>
+      <input id="ceyUser" maxlength="18" placeholder="bus game username" autocomplete="username">
+      <input id="ceyPass" type="password" placeholder="password" autocomplete="current-password">
+      <div id="ceyErr" class="err"></div>
+      <button id="ceyOk" class="btn small">පිවිසෙන්න</button>
+    </div>
+  </div>
+</div>
+
+<div id="pOnline" class="scr panelbg">
+  <div class="panel wide">
+    <button class="x" data-close>✕</button>
+    <h2>🌐 ඔන්ලයින් Chase</h2>
+    <div class="cols">
+      <div class="card">
+        <h3>කාමරයක් හදන්න</h3>
+        <label class="chk"><input type="checkbox" id="pubChk"> ප්‍රසිද්ධ කාමරයක් (ඕනෑම කෙනෙකුට)</label>
+        <button id="bCreate" class="btn yellow">➕ කාමරය හදන්න</button>
+        <h3>කේතයෙන් සම්බන්ධ වෙන්න</h3>
+        <div class="row"><input id="roomCode" maxlength="5" placeholder="ABCD" autocomplete="off" style="text-transform:uppercase"><button id="bJoin" class="btn teal">සම්බන්ධ වෙන්න</button></div>
+        <button id="bQuick" class="btn pink">⚡ ඉක්මන් ක්‍රීඩාව (Public)</button>
+      </div>
+      <div class="card">
+        <h3>විවෘත ප්‍රසිද්ධ කාමර <button id="bRefresh" class="mini">⟳</button></h3>
+        <div id="pubList" class="list"><div class="muted">කාමර නෑ…</div></div>
+      </div>
+    </div>
+    <div id="onlineErr" class="err"></div>
+  </div>
+</div>
+
+<div id="pLobby" class="scr panelbg">
+  <div class="panel wide">
+    <h2>🏨 රැඳී සිටින කාමරය</h2>
+    <div class="invite">
+      <div class="code" id="lbCode">----</div>
+      <div class="invbtns">
+        <button id="bCopy" class="btn small">🔗 Link පිටපත</button>
+      </div>
+    </div>
+    <div id="lbPlayers" class="plist"></div>
+    <div class="cols">
+      <div class="card">
+        <h3>මගේ භූමිකාව (පළමු වටය)</h3>
+        <div class="seg" id="prefSeg"><button data-v="any" class="on">🎲 ඕනෑම</button><button data-v="kassa">🏃 කස්සා</button><button data-v="raja">🔨 රජා</button></div>
+        <h3>වට ගණන <small class="muted">(host)</small></h3>
+        <div class="seg" id="roundSeg"><button data-v="2" class="on">2</button><button data-v="4">4</button><button data-v="6">6</button></div>
+        <h3>සිතියම <small class="muted">(host)</small></h3>
+        <div class="seg scroll" id="mapSegL"></div>
+        <h3>පරිසරය <small class="muted">(host)</small></h3>
+        <div class="seg" id="envTime"><button data-v="day" class="on">☀️ දවල්</button><button data-v="dusk">🌇 සවස</button><button data-v="night">🌙 රෑ</button></div>
+        <div class="seg" id="envWx"><button data-v="clear" class="on">⛅ පැහැදිලි</button><button data-v="rain">🌧️ වැස්ස</button><button data-v="fog">🌫️ මීදුම</button></div>
+        <label class="chk"><input type="checkbox" id="lbPub"> ප්‍රසිද්ධ කාමරය (host)</label>
+      </div>
+      <div class="card">
+        <div id="lbInfo" class="muted">මිතුරන් එනතුරු බලා සිටින්න… (අවම 2 දෙනෙක්)</div>
+        <button id="bReady" class="btn teal">✅ සූදානම්!</button>
+        <button id="bStart" class="btn yellow" disabled>▶ ක්‍රීඩාව පටන් ගන්න</button>
+        <button id="bLeave" class="btn small">← ඉවත් වන්න</button>
+      </div>
+    </div>
+    <p class="fine">කස්සාට ආරම්භක කාලයක් ලැබෙනවා. රජාට කස්සා අල්ලන්න SPACE ඔබන්න ඕනේ. ක්‍රීඩකයන් 3+ නම් අමතර අල්ලන්නන් එකතු වෙනවා.</p>
+  </div>
+</div>
+
+<div id="pLb" class="scr panelbg">
+  <div class="panel wide">
+    <button class="x" data-close>✕</button>
+    <h2>🏆 ලකුණු පුවරුව</h2>
+    <div class="seg scroll" id="lbTabs">
+      <button data-k="kassa_today" class="on">අද හොඳම කස්සා</button><button data-k="raja_today">අද හොඳම රජා</button><button data-k="weekly">සතිය</button><button data-k="alltime">සමස්ත</button><button data-k="fastest">වේගවත්ම පැනීම</button><button data-k="mpwins">Multiplayer ජය</button><button data-k="bestrun">⭐ හොඳම ලකුණු</button><button data-k="daily">දෛනික</button>
+    </div>
+    <div id="lbList" class="list lbl"></div>
+  </div>
+</div>
+
+<div id="pProfile" class="scr panelbg">
+  <div class="panel wide">
+    <button class="x" data-close>✕</button>
+    <h2>👤 ප්‍රොෆයිල්</h2>
+    <div id="profBody"></div>
+  </div>
+</div>
+
+<div id="pDaily" class="scr panelbg">
+  <div class="panel">
+    <button class="x" data-close>✕</button>
+    <h2>📅 අද දෛනික අභියෝගය</h2>
+    <div id="dailyBody"></div>
+    <button id="bDailyPlay" class="btn yellow">▶ අභියෝගය පටන් ගන්න</button>
+  </div>
+</div>
+
+<div id="pHow" class="scr panelbg">
+  <div class="panel wide">
+    <button class="x" data-close>✕</button>
+    <h2>❓ ක්‍රීඩා කරන හැටි</h2>
+    <div class="howgrid">
+      <div class="card"><div class="em">🏃</div><b>මේ කස්සා!</b><p>දුවමින්, හැංගෙමින් කොළඹ හරහා <b>ලක්ෂ්‍රි හෝටලයට</b> පැනගන්න.</p></div>
+      <div class="card"><div class="em">🏨</div><b>හෝටලය කොහෙද?</b><p>රන් පාට ආලෝක කදම්භය සහ ඉහළ ඊතලය හෝටලය පෙන්වයි. 🗺️ සිතියමේ 🏨 බලන්න.</p></div>
+      <div class="card"><div class="em">🔨</div><b>රජා අල්ලන්නේ කොහොමද?</b><p>රජාට ළඟින් <b>SPACE</b> ඔබා ගහන්න ඕනේ. දැක්කා කියලම අල්ලන්න බෑ!</p></div>
+      <div class="card"><div class="em">🌿</div><b>හැංගෙන්න</b><p>පඳුරු, කුණු බඳුන්, ටුක් ටුක්, කඩ… ළඟ <b>E</b>. රජා ළඟ ආවොත් අහු වෙනවා. තත්පර 7ක් විතරයි!</p></div>
+      <div class="card"><div class="em">🚪</div><b>රහස් කෙටි මං</b><p>රන් වළලු ඇති පටු පාරවල් කස්සාට විතරයි රිංගන්න පුළුවන් — රජාට බෑ!</p></div>
+      <div class="card"><div class="em">‼️</div><b>හදිසි රජා!</b><p>ඇවිදින විට රජා හදිසියේ පඳුරකින්/බඳුනකින් පැනිය හැකියි. <b>ඇහුණා…</b> පණිවිඩය දුටු විගස දුවන්න හෝ උපක්‍රම පාවිච්චි කරන්න!</p></div>
+      <div class="card"><div class="em">💨</div><b>උපක්‍රම</b><p>🥥 පොල් ගෙඩිය (රජාව වට්ටන්න) · 💨 දුම් බෝම්බය · 🎭 ඩමි කස්සා · 🍌 කෙසෙල් ලෙල්ල — <b>SPACE</b>. සෙනඟ අතර ඇවිදිනවා නම් 👥 පේන්නේ අඩුයි!</p></div>
+      <div class="card"><div class="em">🔎</div><b>හොයන අය</b><p>සාමාන්‍ය මිනිසුන් කිහිප දෙනෙක් ඔබ හොයනවා. දැක්කොත් කෑගහලා රජාට කියනවා! වාහනයකට පැනලා, කඩයකට රිංගලා හෝ සෙනඟ අතර හැංගෙන්න.</p></div>
+      <div class="card"><div class="em">🏆</div><b>ජය</b><p>හෝටලයට ඇතුල් වී, ආරක්ෂකයා මගහැර, රන් පාට කබඩ් එකේ තත්පර 10ක් හැංගෙන්න!</p></div>
+    </div>
+    <h3>පාලන</h3>
+    <div class="keys">
+      <div><kbd>W A S D</kbd> / ඊතල — ගමන</div><div><kbd>Mouse</kbd> — කැමරාව (click කරන්න)</div>
+      <div><kbd>Shift</kbd> — ධාවනය (ශක්තිය)</div><div><kbd>C</kbd> — හෙමීට (sneak)</div>
+      <div><kbd>E</kbd> — හැංගෙන්න / අල්ලන්න</div><div><kbd>Space</kbd> — අයිතමය / අල්ලන්න</div>
+      <div><kbd>Q</kbd> <kbd>F</kbd> <kbd>R</kbd> — හැකියාවන්</div><div><kbd>1–8</kbd> — emote · <kbd>M</kbd> — සිතියම · <kbd>Esc</kbd> — විරාමය</div>
+    </div>
+    <p class="fine">📱 ජංගම: වම් අත joystick, දකුණු අත ඇදලා කැමරාව, බොත්තම් භාවිතා කරන්න.</p>
+  </div>
+</div>
+
+<div id="pSet" class="scr panelbg">
+  <div class="panel">
+    <button class="x" data-close>✕</button>
+    <h2>⚙️ සැකසුම්</h2>
+    <div class="setrow"><span>🎵 සංගීතය</span><button id="sMusic" class="tog"></button></div>
+    <div class="setrow"><span>🔊 ශබ්ද</span><button id="sSfx" class="tog"></button></div>
+    <div class="setrow"><span>🗣️ සිංහල හඬ (ඇත්නම්)</span><button id="sVoice" class="tog"></button></div>
+    <div class="setrow"><span>🗺️ සිතියම</span><div class="seg scroll" id="mapSeg"></div></div>
+    <div class="setrow"><span>🎯 අමාරුකම (Solo)</span><div class="seg" id="diffSeg"><button data-v="easy">ලේසි</button><button data-v="normal">සාමාන්‍ය</button><button data-v="hard">අමාරු</button><button data-v="insane">පිස්සු</button></div></div>
+    <div class="setrow"><span>🕒 වේලාව</span><div class="seg" id="timeSeg"><button data-v="day">☀️</button><button data-v="dusk">🌇</button><button data-v="night">🌙</button></div></div>
+    <div class="setrow"><span>🌦️ කාලගුණය</span><div class="seg" id="wxSeg"><button data-v="clear">⛅</button><button data-v="rain">🌧️</button><button data-v="fog">🌫️</button></div></div>
+    <div class="setrow"><span>🖥️ ග්‍රැෆික්ස්</span><div class="seg" id="qSeg"><button data-v="0.6">පහළ</button><button data-v="1">ඉහළ</button><button data-v="1.6">අල්ට්‍රා ✨</button></div></div>
+    <div class="setrow"><span>👁️ FOV <b id="fovV"></b></span><input type="range" id="fovR" min="50" max="90" step="1"></div>
+    <div class="setrow"><span>🖱️ සංවේදීතාව <b id="sensV"></b></span><input type="range" id="sensR" min="0.4" max="2" step="0.1"></div>
+    <div class="setrow"><span>🎥 කැමරා දුර <b id="camV"></b></span><input type="range" id="camR" min="3.5" max="11" step="0.5"></div>
+    <div class="setrow"><span>💨 වේග රේඛා</span><button id="sLines" class="tog"></button></div>
+    <div class="setrow"><span>📳 තිර සෙලවීම</span><button id="sShake" class="tog"></button></div>
+    <div class="setrow"><span>🎒 කස්සාගේ ඇඳුම</span><div id="skinSeg" class="seg scroll"></div></div>
+  </div>
+</div>
+
+<!-- ============ RESULT ============ -->
+<div id="pResult" class="scr panelbg">
+  <div class="panel wide result">
+    <div id="resEmoji" class="resem">🏆</div>
+    <h2 id="resTitle">—</h2>
+    <div id="resSub" class="muted"></div>
+    <div id="resStats" class="stats"></div>
+    <div id="resAch" class="ach"></div>
+    <div id="resScores" class="plist"></div>
+    <canvas id="resCanvas" width="540" height="675" class="resimg"></canvas>
+    <div class="btnrow wrap">
+      <button id="bAgain" class="btn yellow">🔄 නැවත</button>
+      <button id="bNext" class="btn pink" style="display:none">▶ ඊළඟ වටය (භූමිකා මාරු)</button>
+      <button id="bShareImg" class="btn small">🖼️ රූපය</button>
+      <button id="bResMenu" class="btn small">මෙනුව</button>
+    </div>
+    <div id="resWait" class="muted"></div>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+  <div id="hudTop">
+    <div id="hudLeft"><div id="hudRole">—</div><div id="hudObj">—</div>
+      <div id="questWrap"><span id="questTxt">🧩 0/3</span> <span id="gateTxt"></span> <b id="scoreTxt">⭐ 0</b></div>
+      <div id="lifeWrap"><span class="hrt">❤️</span><div class="barbg"><div id="lifeFill"></div></div><b id="lifeTxt">100</b></div><div id="hudRound" class="muted"></div></div>
+    <div id="hudMid"><div id="hudTimerLabel">⏱</div><div id="hudTimer">0:00</div><div id="hudSub"></div></div>
+    <div id="hudRight">
+      <div id="mmWrap"><canvas id="mm" width="300" height="300"></canvas></div>
+      <div id="hotelPtr"><div id="hudArrow">▲</div><div id="hudDist">🏨</div></div>
+    </div>
+  </div>
+  <div id="hudFx"></div>
+  <div id="toast"></div>
+  <div id="banner"></div>
+  <div id="big"></div>
+  <div id="caught"></div>
+  <div id="prompt"></div>
+  <div id="danger"></div>
+  <div id="speed"></div>
+  <div id="flash"></div>
+  <div id="hideWrap"><div id="hideTxt"></div><div class="barbg"><div id="hideFill"></div></div></div>
+  <div id="stamWrap"><div class="barbg"><div id="stamFill"></div></div><span>ශක්තිය</span></div>
+  <div id="abils">
+    <button class="ab" id="b_q"><i class="cd"></i><span class="key">Q</span><span class="lbl"></span></button>
+    <button class="ab" id="b_f"><i class="cd"></i><span class="key">F</span><span class="lbl"></span></button>
+    <button class="ab" id="b_r"><i class="cd"></i><span class="key">R</span><span class="lbl"></span></button>
+    <button class="ab big" id="b_e"><i class="cd"></i><span class="key">E</span><span class="lbl"></span></button>
+    <button class="ab big" id="b_sp"><i class="cd"></i><span class="key">␣</span><span class="lbl"></span></button>
+  </div>
+  <div id="emoteBar"></div>
+  <div id="topBtns"><button id="btnEmote" class="mini">💬</button><button id="btnMute" class="mini">🔊</button><button id="btnPause" class="mini">⏸</button></div>
+  <div id="touch">
+    <div id="joy"><div id="joyKnob"></div></div>
+    <button class="ab round" id="b_sprint"><span class="lbl">🏃 දුවන්න</span></button>
+    <button class="ab round" id="b_sneak"><span class="lbl">🥷 හෙමීට</span></button>
+  </div>
+</div>
+<div id="pause" class="scr panelbg"><div class="panel"><h2>⏸ විරාමය</h2><div class="btnrow"><button id="bResume" class="btn yellow">▶ ආපසු</button><button id="bQuit" class="btn small">මෙනුවට</button></div></div></div>
+<div id="conn">⚠️ සම්බන්ධතාව නැතිවුණා… නැවත සම්බන්ධ වෙනවා</div>
+<div id="rot">📱 වඩා හොඳ අත්දැකීමක් සඳහා දුරකථනය තිරස් කරන්න</div>
+
+<script src="config.js"></script>
+<script src="js/vendor/three.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
