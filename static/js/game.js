@@ -77,7 +77,7 @@ export class Game {
     this.phase = 'countdown'; this.ending = false; this.paused = false;
     this.head = o.head || 0; this.roundTime = o.roundTime || 0;
     this.msgT = {}; this.lastRajaWarn = -99; this.hideCount = 0; this.nearHotelSaid = false;
-    this.coins = 0; this.rushT = 5; this.walkNoiseT = 0;
+    this.coins = 0; this.rushT = 5; this.walkNoiseT = 0; this.dodgeWin = 0;
     this.cd = { q: 0, f: 0, r: 0, e: 0, sp: 0 }; this.boostT = 0; this.disguiseT = 0; this.item = null;
     this.stamina = 100; this.stamDelay = 0; this.exhausted = false; this.hotelT = 0; this.hotelHide = null;
     this.hiddenSpot = null; this.hotelSearch = false; this.progress = 0;
@@ -631,6 +631,7 @@ export class Game {
     else if (Math.hypot(me.vx, me.vz) > 1.5 && this.mode !== 'mp') { this.walkNoiseT -= dt; if (this.walkNoiseT <= 0) { this.walkNoiseT = 1.5; this.addNoise(me.x, me.z, 7, 0.8); } }
     if (this.phase !== 'run') return;
     this.pickups(dt);
+    if (this.dodgeWin > 0) this.dodgeWin -= dt;
     this.coinsAndCrowds(dt);
     this.hotelLogic(dt);
     if (me.sprinting || this.boostT > 0) { this.dustT -= dt; if (this.dustT <= 0) { this.dustT = 0.12; this.puffDust(me.x - Math.sin(me.ry) * 0.5, me.z - Math.cos(me.ry) * 0.5); } }
@@ -715,7 +716,29 @@ export class Game {
     if (this.phase !== 'run' || this.ending || this.paused) return;
     Audio.unlock();
     if (this.role === 'raja') return this.catchAttempt();
+    // a swing is winding up: Space now is a dodge that ignores the cooldown
+    if (this.dodgeWin > 0 && !this.me.hidden && this.me.stun <= 0) {
+      this.dodgeWin = 0; this.cd.sp = 0; this.dash(); this.me.invul = Math.max(this.me.invul, 0.9);
+      this.fxPop('💨 මගහැරියා!', this.me.x, 2.6, this.me.z, '#9fe8ff'); Audio.sfx('boost'); return;
+    }
     if (this.item) this.useItem(); else this.dash();
+  }
+  // Raja starts a swing: show it clearly and open a short dodge window
+  warnSwing(ai) {
+    if (this.mode === 'mp' || this.race || this.role !== 'kassa') return;
+    this.dodgeWin = 0.6; Audio.sfx('alert'); this.flash('rgba(255,70,70,.25)');
+    this.toast('🚨 රජා පහර දෙනවා! SPACE = පැනලා මගහරින්න', '#ff7a7a');
+  }
+  // while Raja is between the camera and Kassa, he turns see-through so the view stays clear
+  fadeOccluders(cam, tx, tz) {
+    const cx = cam.position.x, cz = cam.position.z, sx = tx - cx, sz = tz - cz, L2 = sx * sx + sz * sz || 1;
+    for (const ai of this.ais) {
+      if (!ai.ch || ai.pending > 0) continue;
+      let t = ((ai.x - cx) * sx + (ai.z - cz) * sz) / L2; t = clamp(t, 0, 1);
+      const occl = ai.down <= 0 && t > 0.08 && t < 0.92 && Math.hypot(cx + sx * t - ai.x, cz + sz * t - ai.z) < 1.5;
+      const want = occl ? 0.22 : 1;
+      if (ai._op !== want) { ai._op = want; ai.ch.setOpacity(want); }
+    }
   }
   // SPACE with no item: a quick dodge-dash with a moment of invulnerability
   dash() {
@@ -1148,6 +1171,7 @@ export class Game {
     this._cd += (want - this._cd) * Math.min(1, dt * (want < this._cd ? 14 : 3));
     const d = snap ? want : this._cd;
     { const cx2 = tx - fx * d, cz2 = tz - fz * d; cam.position.set(cx2, Math.max(0.5, ty + fy * d, this.world.groundY(cx2, cz2) + 0.7), cz2); }
+    if (!this.race) this.fadeOccluders(cam, tx, tz);
     if (this.shake > 0 && this.opts.shake) { this.shake = Math.max(0, this.shake - dt * 2.2); cam.position.x += (Math.random() - 0.5) * this.shake * 0.7; cam.position.y += (Math.random() - 0.5) * this.shake * 0.7; }
     const fovT = this.opts.fov + ((me.sprinting || this.boostT > 0) && !me.hidden ? 9 : 0); this.fovNow += (fovT - this.fovNow) * Math.min(1, dt * 6);
     if (Math.abs(cam.fov - this.fovNow) > 0.05) { cam.fov = this.fovNow; cam.updateProjectionMatrix(); }
@@ -1215,6 +1239,7 @@ export class Game {
     // effects row
     const fx = []; if (this.boostT > 0) fx.push('⚡'); if (this.disguiseT > 0) fx.push('🎭 ' + Math.ceil(this.disguiseT)); if (this.lives && this.ais.length) { let nd = 1e9; for (const a of this.ais) if (!(a.pending > 0)) nd = Math.min(nd, Math.hypot(a.x - me.x, a.z - me.z)); if (nd < 1e8) fx.push('🔨 රජා ' + Math.round(nd) + 'm'); }
     if (this.coins) fx.push('🪙 ' + this.coins);
+    if (this.role === 'kassa' && this.mode !== 'mp') { let cd2 = 1e9; for (const a of this.ais) if (a.state === 'chase' && a.down <= 0 && a.pending <= 0) cd2 = Math.min(cd2, Math.hypot(a.x - me.x, a.z - me.z)); if (cd2 < 14) fx.push('🚨 රජා ' + Math.round(cd2) + 'm — SPACE = පැන යන්න'); }
     if (this.cover) fx.push('👥 සෙනඟ අතර'); if (this.inSmoke) fx.push('💨'); if ((this.terrainMul || 1) < 0.95) fx.push(this.terrainMul < 0.8 ? '🌾 මඩ — වේගය අඩුයි' : '🏖️ වැලි — වේගය අඩුයි'); $('hudFx').textContent = fx.join('  ');
     const qw = $('questWrap');
     if (qw) {

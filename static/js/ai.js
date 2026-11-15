@@ -106,7 +106,7 @@ export class RajaAI {
     }
     if (this.swingT >= 0) {
       this.swingT += dt; this.halt(dt);
-      if (this.swingT > 0.14 && !this.swingDone) {
+      if (this.swingT > 0.55 && !this.swingDone) {   // wind-up: Kassa can see it and dodge
         this.swingDone = true;
         const d = Math.hypot(k.x - this.x, k.z - this.z);
         if (k.decoy) { g.popDecoy(this); this.swingT = -1; this.stunPause = 1.2; return; }
@@ -172,7 +172,7 @@ export class RajaAI {
         if (this.talkT <= 0 && sight > 0) { this.talkT = 7; this.say(g.pickLine('taunt')); }
         if (k.decoy && d < 2.6) { g.popDecoy(this); this.stunPause = 1.2; break; }
         if (sight > 0 && d < 3.3 && !k.hidden && !k.decoy) {
-          this.swingT = 0; this.swingDone = false; this.ch.play('swing', 0.9); g.sfx('swing'); break;
+          this.swingT = 0; this.swingDone = false; this.ch.play('swing', 0.9); g.sfx('swing'); if (!g.race) g.warnSwing(this); break;
         }
         if (sight > 0 && d < 9 && losClear(this.x, this.z, k.x, k.z, w.cols, 0.3)) this.steer(dt, k.x - this.x, k.z - this.z, 8.2 * base * tm);
         else {

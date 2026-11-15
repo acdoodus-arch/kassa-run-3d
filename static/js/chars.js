@@ -214,6 +214,15 @@ export class Character {
     this.bubble.position.y = (this.topY + 1.15) / this.spec.scale; this.bubble.visible = true; this.bubbleT = dur;
   }
   setStars(on) { this.stars.visible = !!on; }
+  // fade this character (used when he stands between the camera and Kassa). Materials are cloned once.
+  setOpacity(a) {
+    if (!this._fade) {
+      this._fade = [];
+      const cl = (m) => { const c = m.clone(); c.transparent = true; this._fade.push(c); return c; };
+      this.root.traverse(o => { if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(cl) : cl(o.material); });
+    }
+    for (const m of this._fade) { m.opacity = a; m.depthWrite = a >= 1; }
+  }
   setMark(txt, color = '#ffdd33') {
     if (!txt) { if (this.mark) this.mark.visible = false; return; }
     if (!this.mark) { this.mark = makeSprite(txt, { size: 80, color, shadow: '#000', pad: 4, scale: 0.012 }); this.root.add(this.mark); }
