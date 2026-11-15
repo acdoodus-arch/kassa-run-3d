@@ -126,8 +126,12 @@ export class RajaAI {
     // perception
     const sight = this.see(k);
     const prog = g.progress;
-    if (sight > 0) {
-      this.alert = Math.min(1.6, this.alert + dt * (1.0 + sight * 2.2 + prog) * g.diff.alert);
+    // Raja always notices a walking Kassa within 30 units, even from behind or through walls (no line of sight needed)
+    const dK0 = Math.hypot(k.x - this.x, k.z - this.z);
+    const sense = (!k.hidden && !k.safe && dK0 < 30) ? (dK0 < 14 ? 0.6 : 0.4) : 0;
+    const sightAll = Math.max(sight, sense);
+    if (sightAll > 0) {
+      this.alert = Math.min(1.6, this.alert + dt * (1.0 + sightAll * 2.2 + prog) * g.diff.alert);
       this.lastSeen = { x: k.x, z: k.z };
       this.lastSeenT = g.t;
     } else this.alert = Math.max(0, this.alert - dt * 0.45);
@@ -170,13 +174,15 @@ export class RajaAI {
         this.chaseT = (this.chaseT || 0) + dt; this.tired = (this.tired || 0) - dt;
         if (this.chaseT > g.diff.stam && !(this.tired > -8)) { this.tired = 3.5; this.chaseT = 0; this.say('හ්ම්… මහන්සියි!'); }
         const tm = this.tired > 0 ? 0.9 : 1;
-        if (sight > 0 || (k.hidden === false && d < 6 && losClear(this.x, this.z, k.x, k.z, w.cols, 1.7))) { this.lastSeen = { x: k.x, z: k.z }; this.loseT = 0; }
+        if (sight > 0 || (k.hidden === false && d < 6 && losClear(this.x, this.z, k.x, k.z, w.cols, 1.7)) || (!k.hidden && d < 30)) { this.lastSeen = { x: k.x, z: k.z }; this.loseT = 0; }
         else this.loseT = (this.loseT || 0) + dt;
         const tgt = this.lastSeen || { x: k.x, z: k.z };
         const dt2 = Math.hypot(tgt.x - this.x, tgt.z - this.z);
         if (this.talkT <= 0 && sight > 0) { this.talkT = 7; this.say(g.pickLine('taunt')); }
         if (k.decoy && d < 2.6) { g.popDecoy(this); this.stunPause = 1.2; break; }
-        if ((sight > 0 || this.lunge) && d < 3.3 && !k.hidden && !k.decoy) {
+        // before the 5 seconds are up Raja only shadows Kassa (no hit); the lunge is the hit
+        if (!this.lunge && d < 2.6) { this.halt(dt); this.sync(); break; }
+        if (this.lunge && d < 3.3 && !k.hidden && !k.decoy) {
           this.swingT = 0; this.swingDone = false; this.ch.play('swing', 0.9); g.sfx('swing'); if (!g.race) g.warnSwing(this); break;
         }
         if (this.lunge && !k.hidden) { this.steer(dt, k.x - this.x, k.z - this.z, 10.5 * base); break; }

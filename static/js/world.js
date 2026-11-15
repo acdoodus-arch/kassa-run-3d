@@ -1030,26 +1030,38 @@ export class World {
   }
 
   // a group of people walks across the street at (at) on the line (line); they are solid and block the way
-  spawnRush(line, at, horiz, n = 4) {
+  // a group comes toward Kassa from ahead, stands ACROSS the road (a wall of people), then walks back off.
+  // horiz: the group is spread along the road's cross axis (x) and walks along z (toward Kassa), and vice versa.
+  spawnRush(line, at, horiz, n = 6) {
     let k = 0;
     for (const p of this.rushPool) {
       if (p.active || k >= n) continue;
-      const off = (k - (n - 1) / 2) * 1.3 + (this.rnd() - 0.5) * 0.4; k++;
-      const a = at - 6.5, b = at + 6.5;
-      if (horiz) { p.x0 = a; p.x1 = b; p.z0 = p.z1 = line + off; } else { p.z0 = a; p.z1 = b; p.x0 = p.x1 = line + off; }
-      p.len = 13; p.speed = 1.9 + this.rnd() * 0.6; p.t = -this.rnd() * 0.9; p.active = true;
+      const spread = (k - (n - 1) / 2) * 1.25 + (this.rnd() - 0.5) * 0.2; k++;
+      p.horiz = horiz; p.cross = at + spread;
+      p.a0 = line - 10; p.am = line;            // walk axis: from 10 units ahead of the point to the point
+      p.speed = 2.1 + this.rnd() * 0.4; p.linger = 4 + this.rnd() * 1.5;
+      p.go = 10 / p.speed; p.back = 10 / p.speed; p.t = -this.rnd() * 0.6; p.active = true; p.stage = '';
       p.ch.setAnim('walk'); p.ch.speed = 1;
-      p.ch.root.rotation.y = horiz ? (p.x1 > p.x0 ? Math.PI / 2 : -Math.PI / 2) : (p.z1 > p.z0 ? 0 : Math.PI);
     }
     return k;
   }
   updateRushes(dt) {
     for (const p of this.rushPool) {
       if (!p.active) continue;
-      p.t += dt; const f = p.t / (p.len / p.speed);
-      if (f >= 1) { p.active = false; p.ch.root.visible = false; p.circ.x = 0; p.circ.z = -999; continue; }
-      if (f < 0) { p.ch.root.visible = false; p.circ.z = -999; continue; }
-      const x = p.x0 + (p.x1 - p.x0) * f, z = p.z0 + (p.z1 - p.z0) * f;
+      p.t += dt;
+      let a, stage, dirPos;
+      if (p.t < 0) { p.ch.root.visible = false; p.circ.z = -999; continue; }
+      if (p.t < p.go) { stage = 'in'; a = p.a0 + (p.am - p.a0) * (p.t / p.go); dirPos = true; }
+      else if (p.t < p.go + p.linger) { stage = 'stand'; a = p.am + Math.sin(p.t * 2.5 + p.cross) * 0.15; dirPos = null; }
+      else if (p.t < p.go + p.linger + p.back) { stage = 'out'; a = p.am + (p.a0 - p.am) * ((p.t - p.go - p.linger) / p.back); dirPos = false; }
+      else { p.active = false; p.ch.root.visible = false; p.circ.x = 0; p.circ.z = -999; continue; }
+      if (stage !== p.stage) {   // turn to face the way they walk (toward Kassa when coming in, away when leaving)
+        p.stage = stage;
+        const face = dirPos === null ? (p.horiz ? Math.PI : Math.PI / 2) : ((dirPos === true) === p.horiz ? (p.horiz ? 0 : Math.PI / 2) : (p.horiz ? Math.PI : -Math.PI / 2));
+        p.ch.root.rotation.y = stage === 'stand' ? p.ch.root.rotation.y : face;
+        if (stage === 'stand') p.ch.setAnim('idle'); else p.ch.setAnim('walk');
+      }
+      const x = p.horiz ? p.cross : a, z = p.horiz ? a : p.cross;
       p.ch.root.visible = true; p.ch.root.position.set(x, this.groundY(x, z), z); p.circ.x = x; p.circ.z = z;
       p.ch.update(dt);
     }
