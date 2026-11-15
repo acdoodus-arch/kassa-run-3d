@@ -7,7 +7,7 @@ import { RajaAI } from './ai.js';
 import { Audio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
-const K = { RUN: 6.0, SPRINT: 8.6, SNEAK: 2.9, RAJA: 6.5, BURST: 9.5, MAXHIDE: 7, HOTEL_HIDE: 10 };
+const K = { WALK: 3.4, RUN: 6.0, SPRINT: 8.6, SNEAK: 2.2, RAJA: 6.5, BURST: 9.5, MAXHIDE: 7, HOTEL_HIDE: 10 };
 const EMOTES = ['කොහෙද දුවන්නේ?', 'හෝටලේ තව ටිකයි!', 'ඉක්මනට හැංගෙන්න!', 'අහු වුණා!', 'හෙමීට හෙමීට...', '😂😂😂', 'අයියෝ!', 'හා හා...'];
 export const EMOTE_LIST = EMOTES;
 export const DIFF = {
@@ -113,7 +113,14 @@ export class Game {
     // everyone starts with one random trick so the first ambush is survivable
     if (this.role === 'kassa' || this.race) this.item = ['smoke', 'decoy', 'coconut', 'banana'][Math.floor(this.rnd() * 4)];
     this.hits = 0; this.tricks = 0; this._pz = this.me.z; this.fragHide = null;
-    this.quest = null;   // (hotel-pass quest removed: the gate is always open) this.gateOpen = !this.quest; this.gateWhy = '';
+    this.quest = null;   // hotel-pass quest removed: the front door is always open
+    this.gateOpen = true; this.gateWhy = '';   // (was never set, so the invisible door wall blocked every entry)
+    // solo: Kassa starts hidden in the closest hiding place and steps out when ready (E)
+    if (this.role === 'kassa' && this.mode !== 'mp' && !this.race && !o.resume) {
+      const okS = ['bush', 'dumpster', 'hut', 'rock', 'barrels', 'cart', 'booth', 'haystack', 'stall', 'car', 'boat', 'shelter'];
+      const near = this.world.hideSpots.filter(s => okS.includes(s.type) && !s.vehicle).sort((a, b) => Math.hypot(a.x - spawn[0], a.z - spawn[1]) - Math.hypot(b.x - spawn[0], b.z - spawn[1]))[0];
+      if (near) { this.hide(near); this.hideLimit = 9999; this.toast('🌿 හැංගිලා ඉන්නවා… රජා ගමන් කරන විට බලන්න. සූදානම් වුණාම E = ගොඩ එන්න', '#9fe8ff'); }
+    }
     if (this.world.gateGroup) this.world.gateGroup.visible = !!this.quest;
     this.buildRain();
     this.shadows = this.renderer.shadowMap.enabled;
@@ -603,7 +610,9 @@ export class Game {
     me.sprinting = wantSprint && this.stamina > 2 && !this.exhausted;
     if (me.sprinting) { this.stamina = Math.max(0, this.stamina - 26 * dt * (this.mode === 'mp' ? 1 : this.diff.drain)); this.stamDelay = 1; if (this.stamina <= 0) { this.exhausted = true; this.toast('ශක්තිය ඉවරයි! හෙමීට…', '#ffd23f'); } }
     else { this.stamDelay -= dt; if (this.stamDelay <= 0) this.stamina = Math.min(100, this.stamina + 20 * dt); }
-    let speed = me.sneaking ? K.SNEAK : me.sprinting ? K.SPRINT : K.RUN;
+    // solo: Kassa walks by default (quiet). Shift = run (noisy, Raja catches up). Multiplayer unchanged.
+    const solo = this.mode !== 'mp';
+    let speed = me.sneaking ? K.SNEAK : me.sprinting ? (solo ? K.RUN : K.SPRINT) : (solo ? K.WALK : K.RUN);
     if (this.boostT > 0) speed *= 1.5;
     speed *= Math.max(0.55, inp.mag);
     if (frozen) { inp.wx = inp.wz = 0; }
@@ -672,7 +681,7 @@ export class Game {
       if (d < s.r && d < bd) { best = s; bd = d; }
     }
     const hs = this.world.hotelSpot;
-    if (hs && Math.hypot(hs.x - me.x, hs.z - me.z) < 3.2 && me.z < -51) { best = hs; }
+    if (hs && Math.hypot(hs.x - me.x, hs.z - me.z) < 3.2 && me.z < this.map.hotel.frontZ - 0.5) { best = hs; }
     // hop onto a passing bus / tuk-tuk / car: other people's vehicles are a moving hiding place
     if (!best && !this.race) for (const v of this.world.vehicles) {
       if (v.hidden || (v.noRide || 0) > this.t) continue;
@@ -819,8 +828,8 @@ export class Game {
     if ((inCone || d < 2.2) && losClear(g.x, g.z, me.x, me.z, this.world.cols, 1.7)) {
       g.cd = 4;
       g.ch.say(this.pickLine('guard'), 2.2); Audio.sfx('whistle');
-      this.knockMe(2.0, 'guard');
-      me.x = 0; me.z = -46.5; me.tp = true; this.toast('ආරක්ෂකයා පිටත් කළා! 😅', '#ff7a7a'); this.shake = 0.6;
+      // the guard no longer throws Kassa out (that made the hotel impossible to enter): he whistles and calls Raja
+      this.alertRaja(me.x, me.z, 'guard'); this.toast('🛎️ ආරක්ෂකයා දැක්කා! ඉක්මනට කබඩ් එකකට!', '#ff7a7a');
     }
   }
   updateNPCs(dt) {
@@ -1219,13 +1228,13 @@ export class Game {
     x.fillStyle = '#2fa4d9'; x.fillRect(0, 0, 5, S);
     x.fillStyle = '#4a4f5c';
     for (const l of m.roadLinesZ) x.fillRect(0, pz(l - 5), S, 10 * k);
-    for (const l of m.roadLinesX) { const z0 = l === 0 ? -45 : b.z0; x.fillRect(px(l - 5), pz(z0), 10 * k, (b.z1 - z0) * k); }
+    for (const l of m.roadLinesX) { const z0 = b.z0; x.fillRect(px(l - 5), pz(z0), 10 * k, (b.z1 - z0) * k); }
     m.blockCentersZ.forEach((cz, j) => m.blockCentersX.forEach((cx, i) => {
       const t = m.grid[j][i]; if (t === 'hotel') return;
       x.fillStyle = { plaza: '#ead9b2', park: '#58b84a', hill: '#4f9a43', paddy: '#a7d36b', lake: '#e8d9a8', beach: '#f0dca0', depot: '#7b8090', market: '#e8cfa0' }[t] || '#d9d0bf';
       x.fillRect(px(cx - 15), pz(cz - 15), 30 * k, 30 * k);
     }));
-    x.fillStyle = '#f3c63c'; x.fillRect(px(-32), pz(-72), 64 * k, 22 * k);
+    x.fillStyle = '#f3c63c'; { const H = m.hotel; const zTop = H.lobby.z0 - 7; x.fillRect(px(-32), pz(zTop), 64 * k, (H.frontZ - zTop) * k); }
     const dg = m.diagonal; if (dg) { x.strokeStyle = '#d9c9a6'; x.lineWidth = dg.w * k; x.beginPath(); x.moveTo(px(dg.x0), pz(dg.z0)); x.lineTo(px(dg.x1), pz(dg.z1)); x.stroke(); }
     m.blockCentersZ.forEach((cz, j) => m.blockCentersX.forEach((cx, i) => { if (m.grid[j][i] === 'plaza') { x.fillStyle = '#4cc9f0'; x.beginPath(); x.arc(px(cx), pz(cz), 4.2 * k, 0, TAU); x.fill(); } }));
     m.blockCentersZ.forEach((cz, j) => m.blockCentersX.forEach((cx, i) => { if (m.grid[j][i] === 'lake') { x.fillStyle = '#4cc9f0'; x.beginPath(); x.arc(px(cx), pz(cz), 10.5 * k, 0, TAU); x.fill(); } }));
@@ -1260,6 +1269,6 @@ export class Game {
     for (const sk of (this.seekers || [])) if (sk.state === 'chase' || Math.hypot(sk.x - me.x, sk.z - me.z) < 22) dot(sk.x, sk.z, '#ff9800', 3.5);
     x.save(); x.translate(px(me.x), pz(me.z)); x.rotate(-me.ry); x.fillStyle = this.role === 'kassa' ? '#ffd23f' : '#ff8fa3'; x.strokeStyle = '#000'; x.lineWidth = 2;
     x.beginPath(); x.moveTo(0, 8); x.lineTo(-6, -6); x.lineTo(6, -6); x.closePath(); x.fill(); x.stroke(); x.restore();
-    x.fillStyle = '#ffd23f'; x.strokeStyle = '#000'; x.lineWidth = 2; x.font = 'bold 20px sans-serif'; x.textAlign = 'center'; x.strokeText('🏨', px(0), pz(-52)); x.fillText('🏨', px(0), pz(-52));
+    x.fillStyle = '#ffd23f'; x.strokeStyle = '#000'; x.lineWidth = 2; x.font = 'bold 20px sans-serif'; x.textAlign = 'center'; const hzL = pz(this.map.hotel.door[1] - 6); x.strokeText('🏨', px(0), hzL); x.fillText('🏨', px(0), hzL);
   }
 }

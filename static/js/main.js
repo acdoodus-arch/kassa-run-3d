@@ -21,6 +21,35 @@ const BASE = (window.KASSA_BACKEND || '').replace(/\/$/, '');
 function api(path, body) {
   return fetch(BASE + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {}).then(r => r.json().then(j => ({ ok: r.ok, status: r.status, ...j })));
 }
+// Free hosting sleeps when idle: show a wake-up/restart bar instead of a silent hang, then continue booting.
+async function waitForServer() {
+  const ping = () => {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 4000);
+    return fetch(BASE + '/api/daily', { cache: 'no-store', signal: c.signal }).then(r => { clearTimeout(t); return r.ok; }).catch(() => { clearTimeout(t); return false; });
+  };
+  if (await ping()) return;
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9999;width:min(440px,88vw);background:rgba(20,8,40,.95);border:2px solid #ffd23f;border-radius:16px;padding:18px 20px;color:#fff;text-align:center;box-shadow:0 10px 40px #000a';
+  box.innerHTML = '<div style="font-size:20px;font-weight:800;margin-bottom:6px">🔄 සර්වරය නැවත ආරම්භ වෙමින්…</div>' +
+    '<div class="wmsg" style="font-size:14px;opacity:.9;margin-bottom:12px">සර්වරය නින්දෙන් අවදි කරමින්. තත්පර 30–60ක් ගත විය හැක.</div>' +
+    '<div style="height:14px;background:#2a1a4a;border-radius:8px;overflow:hidden"><div class="wbar" style="height:100%;width:0%;background:linear-gradient(90deg,#ffd23f,#ff8fa3);transition:width .5s"></div></div>' +
+    '<div class="wsec" style="font-size:12px;opacity:.7;margin-top:8px">0s</div>';
+  document.body.appendChild(box);
+  const msg = box.querySelector('.wmsg'), bar = box.querySelector('.wbar'), sec = box.querySelector('.wsec');
+  const t0 = Date.now();
+  for (;;) {
+    const el = Date.now() - t0;
+    bar.style.width = (95 * (1 - Math.exp(-el / 25000))).toFixed(1) + '%';
+    sec.textContent = Math.round(el / 1000) + 's';
+    if (el > 20000) msg.textContent = 'තවම අවදි වෙමින්… කරුණාකර රැඳී සිටින්න (නොමිලේ සර්වර් එක නිසා).';
+    if (await ping()) {
+      bar.style.width = '100%'; msg.textContent = 'සර්වරය සූදානම්! ✅'; await new Promise(r => setTimeout(r, 800));
+      box.remove(); return;
+    }
+    if (el > 150000) { msg.textContent = 'සර්වරය තවම පිළිතුරු දෙන්නේ නැහැ. පිටුව නැවත පූරණය කරන්න (Reload).'; return; }
+    await new Promise(r => setTimeout(r, 1500));
+  }
+}
 function reportError(msg, ctx) { try { fetch(BASE + '/api/error', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: me.token, msg: String(msg), ctx: String(ctx || '') }) }); } catch (e) {} }
 addEventListener('error', (e) => reportError(e.message, (e.filename || '') + ':' + e.lineno));
 addEventListener('unhandledrejection', (e) => reportError('promise: ' + (e.reason && e.reason.message || e.reason), ''));
@@ -59,7 +88,7 @@ async function boot() {
     let q = 1; try { q = parseFloat(localStorage.getItem('kr_q') || (isTouch ? '0.6' : '1')); } catch (e) {}
     renderer.shadowMap.enabled = q >= 1.5; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     net = new Net();
-    game = new Game(renderer, canvas, net, cfg, map); game.q = q; game.resize();
+    game = new Game(renderer, canvas, net, cfg, map); game.q = q; game.resize(); window.game = game;   // handy for debugging in the console
     game.maps = maps; game.onEnd = onGameEnd;
     try { Object.assign(game.opts, JSON.parse(localStorage.getItem('kr_opts') || '{}')); } catch (e) {}
     fill(60);
@@ -67,6 +96,7 @@ async function boot() {
     buildMenuWorld();
     fill(80);
     wireUi();
+    await waitForServer();
     await identify();
     fill(100);
   } catch (e) { console.error(e); reportError('boot ' + e.message, e.stack); $('loadTip').textContent = '⚠️ දෝෂයක්: ' + e.message; clearInterval(tipT); return; }

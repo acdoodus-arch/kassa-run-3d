@@ -158,7 +158,7 @@ export class RajaAI {
         const d = Math.hypot(k.x - this.x, k.z - this.z);
         this.chaseT = (this.chaseT || 0) + dt; this.tired = (this.tired || 0) - dt;
         if (this.chaseT > g.diff.stam && !(this.tired > -8)) { this.tired = 3.5; this.chaseT = 0; this.say('හ්ම්… මහන්සියි!'); }
-        const tm = this.tired > 0 ? 0.72 : 1;
+        const tm = this.tired > 0 ? 0.9 : 1;
         if (sight > 0 || (k.hidden === false && d < 6 && losClear(this.x, this.z, k.x, k.z, w.cols, 1.7))) { this.lastSeen = { x: k.x, z: k.z }; this.loseT = 0; }
         else this.loseT = (this.loseT || 0) + dt;
         const tgt = this.lastSeen || { x: k.x, z: k.z };
@@ -168,11 +168,11 @@ export class RajaAI {
         if (sight > 0 && d < 3.3 && !k.hidden && !k.decoy) {
           this.swingT = 0; this.swingDone = false; this.ch.play('swing', 0.9); g.sfx('swing'); break;
         }
-        if (sight > 0 && d < 9 && losClear(this.x, this.z, k.x, k.z, w.cols, 0.3)) this.steer(dt, k.x - this.x, k.z - this.z, 7.0 * base * tm);
+        if (sight > 0 && d < 9 && losClear(this.x, this.z, k.x, k.z, w.cols, 0.3)) this.steer(dt, k.x - this.x, k.z - this.z, 8.2 * base * tm);
         else {
           this.repath -= dt;
           if (!this.path || this.repath <= 0) { this.goTo(tgt.x, tgt.z); this.repath = 0.35; }
-          const done = this.follow(dt, 7.0 * base * tm);
+          const done = this.follow(dt, 8.2 * base * tm);
           if (done && dt2 < 3) { this.check = []; this.setState('search'); this.ch.setMark('?'); }
         }
         if (this.loseT > 9) { this.alert = 0.4; this.check = []; this.setState('search'); this.ch.setMark('?'); }

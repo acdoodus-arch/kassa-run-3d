@@ -30,3 +30,6 @@ Backend must allow both origins:
 
 ## Ceylon My Bus login (live)
 Start the backend with `CEYLON_FIREBASE_PROJECT=kayal-super-line` (plus the CORS origins above). The name screen has a "Ceylon My Bus" box: it signs in through Firebase (`username@drivers.ceylonbus.app`) and sends the ID token to `/api/identify`; the server verifies it and links the account. Requires `pip install "PyJWT[crypto]"` (in requirements.txt).
+
+## Permanent backend (live)
+Render free web service kassa-api (Docker, from github.com/acdoodus-arch/kassa-run-3d) at https://kassa-api-b5ho.onrender.com. Front-end built with: python tools/make_netlify.py https://kassa-api-b5ho.onrender.com. Free tier sleeps when idle and its SQLite data resets on redeploy/restart. Admin password: ADMIN_PASSWORD.txt (local, not in git).

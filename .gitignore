@@ -4,3 +4,4 @@ netlify-site/
 kassa-deploy.zip
 __pycache__/
 *.pyc
+ADMIN_PASSWORD.txt
