@@ -14,4 +14,5 @@ open(os.path.join(out, "netlify.toml"), "w").write(
     # the admin dashboard lives on the game server: proxy /admin and its API through the site
     '[[redirects]]\n  from = "/admin"\n  to = "%s/admin"\n  status = 200\n  force = true\n'
     '[[redirects]]\n  from = "/api/admin/*"\n  to = "%s/api/admin/:splat"\n  status = 200\n  force = true\n' % (backend, backend))
+open(os.path.join(out, "_redirects"), "w").write("/admin %s/admin 200!\n/api/admin/* %s/api/admin/:splat 200!\n" % (backend, backend))
 print("built", out, "-> backend", backend)

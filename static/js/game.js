@@ -11,9 +11,9 @@ const K = { WALK: 3.4, RUN: 6.0, SPRINT: 8.6, SNEAK: 2.2, RAJA: 6.5, BURST: 9.5,
 const EMOTES = ['කොහෙද දුවන්නේ?', 'හෝටලේ තව ටිකයි!', 'ඉක්මනට හැංගෙන්න!', 'අහු වුණා!', 'හෙමීට හෙමීට...', '😂😂😂', 'අයියෝ!', 'හා හා...'];
 export const EMOTE_LIST = EMOTES;
 export const DIFF = {
-  easy: { ais: 1, spd: 0.98, vis: 0.95, alert: 0.95, hide: 8, stam: 14, ambush: 45, drain: 1, seekers: 4, dmgMul: 0.8 },
-  normal: { ais: 2, spd: 1.1, vis: 1.15, alert: 1.3, hide: 6, stam: 12, ambush: 26, drain: 1.15, seekers: 6, dmgMul: 1 },
-  hard: { ais: 3, spd: 1.2, vis: 1.3, alert: 1.6, hide: 4.5, stam: 11, ambush: 15, drain: 1.3, seekers: 9, dmgMul: 1.2 },
+  easy: { ais: 1, spd: 0.9, vis: 0.8, alert: 0.8, hide: 10, stam: 16, ambush: 55, drain: 0.8, seekers: 2, dmgMul: 0.5 },
+  normal: { ais: 2, spd: 0.95, vis: 0.9, alert: 1.0, hide: 8, stam: 14, ambush: 40, drain: 1, seekers: 3, dmgMul: 0.7 },
+  hard: { ais: 3, spd: 1.1, vis: 1.1, alert: 1.3, hide: 6, stam: 12, ambush: 25, drain: 1.2, seekers: 5, dmgMul: 1 },
   insane: { ais: 4, spd: 1.3, vis: 1.45, alert: 2, hide: 3.5, stam: 10, ambush: 9, drain: 1.5, seekers: 12, dmgMul: 1.4 },
 };
 const SPOT = {
@@ -36,7 +36,7 @@ export class Game {
   constructor(renderer, canvas, net, cfg, map) {
     this.renderer = renderer; this.canvas = canvas; this.net = net; this.cfg = cfg; this.map = map; this.baseMap = map; this.maps = null;
     this.keys = {}; this.touch = { x: 0, z: 0, sprint: false, sneak: false };
-    this.opts = { map: 'hillcountry', difficulty: 'hard', time: 'day', weather: 'clear', fov: 62, sens: 1, camDist: 6.2, lines: true, shake: true }; this.diff = DIFF.hard;
+    this.opts = { map: 'hillcountry', difficulty: 'normal', time: 'day', weather: 'clear', fov: 62, sens: 1, camDist: 6.2, lines: true, shake: true }; this.diff = DIFF.normal;
     this.running = false; this.paused = false; this.q = 1; this.myName = 'Kassa'; this.myId = null;
     this.camYaw = Math.PI; this.camPitch = 0.32; this.camDist = 6.2; this.shake = 0;
     this.onEnd = null; this.lastFrame = 0; this.hudT = 0; this.mmT = 0; this.sendT = 0;
@@ -685,7 +685,7 @@ export class Game {
     // hop onto a passing bus / tuk-tuk / car: other people's vehicles are a moving hiding place
     if (!best && !this.race) for (const v of this.world.vehicles) {
       if (v.hidden || (v.noRide || 0) > this.t) continue;
-      const hx = (v.horiz ? v.len : v.wid) / 2 + 1.8, hz = (v.horiz ? v.wid : v.len) / 2 + 1.8;
+      const hx = (v.horiz ? v.len : v.wid) / 2 + 3.2, hz = (v.horiz ? v.wid : v.len) / 2 + 3.2;
       if (Math.abs(me.x - v.x) < hx && Math.abs(me.z - v.z) < hz) { const d = Math.hypot(me.x - v.x, me.z - v.z); if (d < bd) { bd = d; best = { type: 'ride', vehicle: v, x: v.x, z: v.z, r: 0, busy: 0 }; } }
     }
     return best;
@@ -767,7 +767,7 @@ export class Game {
     const me = this.me;
     this.hiddenSpot = s; me.hidden = true; me.hideT = 0; me.pre = { x: me.x, z: me.z };
     this.fragHide = this.quest ? (this.quest.marks.find(m => m.spot === s && !m.got) || null) : null; if (this.fragHide) { this.fragHide.t = 0; this.toast('🧩 පාස් කොටස ගන්නවා… ටිකක් හැංගී ඉන්න!', '#7df9ff'); }
-    this.hideLimit = (this.mode === 'mp' ? K.MAXHIDE : this.diff.hide) * (SPOT[s.type] || [0, 0, 1])[2];
+    this.hideLimit = s.vehicle ? 30 : (this.mode === 'mp' ? K.MAXHIDE : this.diff.hide) * (SPOT[s.type] || [0, 0, 1])[2];
     if (s.vehicle) this.toast('🚕 වාහනයක් මත හැංගුණා! ගමන් යනවා…', '#9fe8ff');
     me.x = s.x; me.z = s.z; me.vx = me.vz = 0; this.ch.root.visible = false; this.hideCount++;
     if (s.closet) { me.ho = true; this.hotelT = 0; me.pre = { x: s.x, z: s.z + 2.4 }; }
