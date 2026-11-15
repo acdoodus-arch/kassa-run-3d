@@ -27,7 +27,7 @@ export class RajaAI {
     if (d > 3 && g.smokeBlocks(this.x, this.z, k.x, k.z)) return 0;
     return 1 - d / range * 0.6;   // closer = faster alert
   }
-  setState(s) { this.state = s; this.stateT = 0; this.path = null; this.repath = 0; }
+  setState(s) { this.state = s; this.stateT = 0; this.path = null; this.repath = 0; if (s !== 'chase') { this.chaseClock = 0; this.lunge = false; } }
   say(line) { this.ch.say(line, 2.2); }
   pickPatrol() {
     // Raja only ever hunts Kassa: he prowls the streets around him, never the hotel
@@ -105,12 +105,13 @@ export class RajaAI {
       if (b) { g.removeBanana(b); this.knock(2.2, 'banana'); this.invul = 2; g.toast('රජා ලිස්සා වැටුණා! 🍌', '#ffe14d'); return; }
     }
     if (this.swingT >= 0) {
-      this.swingT += dt; this.halt(dt);
+      this.swingT += dt;
+      if (this.lunge) this.steer(dt, k.x - this.x, k.z - this.z, 10.5 * this.speedBase); else this.halt(dt);   // a lunge keeps closing in while it winds up
       if (this.swingT > 0.55 && !this.swingDone) {   // wind-up: Kassa can see it and dodge
         this.swingDone = true;
         const d = Math.hypot(k.x - this.x, k.z - this.z);
         if (k.decoy) { g.popDecoy(this); this.swingT = -1; this.stunPause = 1.2; return; }
-        if (!k.hidden && d < 3.4 && !k.safe) { if (g.race) g.raceTag(this); else g.hitKassa(this); return; }
+        if (!k.hidden && d < 3.4 && !k.safe) { if (g.race) g.raceTag(this); else { g.hitKassa(this); this.chaseClock = 0; this.lunge = false; } return; }
       }
       if (this.swingT > 0.9) { this.swingT = -1; this.recover = 0.3; this.setState('search'); }
       this.sync(); return;
@@ -162,6 +163,10 @@ export class RajaAI {
       case 'chase': {
         this.ch.setAnim('chase'); this.ch.setMark(this.tired > 0 ? '💦' : '!', '#ff4d4d');
         const d = Math.hypot(k.x - this.x, k.z - this.z);
+        // 5-second rule: once chasing, Kassa has 5 seconds to break away (hide, get on a vehicle, or dodge).
+        // Hiding or boarding a vehicle resets the clock; otherwise Raja lunges and catches him.
+        if (k.hidden) { this.chaseClock = 0; this.lunge = false; }
+        else { this.chaseClock = (this.chaseClock || 0) + dt; if (!this.lunge && this.chaseClock >= 5) { this.lunge = true; g.toast('🚨 රජා කෙලින්ම පැනලා එනවා! හැංගෙන්න!', '#ff4d4d'); g.sfx('alert'); } }
         this.chaseT = (this.chaseT || 0) + dt; this.tired = (this.tired || 0) - dt;
         if (this.chaseT > g.diff.stam && !(this.tired > -8)) { this.tired = 3.5; this.chaseT = 0; this.say('හ්ම්… මහන්සියි!'); }
         const tm = this.tired > 0 ? 0.9 : 1;
@@ -171,9 +176,10 @@ export class RajaAI {
         const dt2 = Math.hypot(tgt.x - this.x, tgt.z - this.z);
         if (this.talkT <= 0 && sight > 0) { this.talkT = 7; this.say(g.pickLine('taunt')); }
         if (k.decoy && d < 2.6) { g.popDecoy(this); this.stunPause = 1.2; break; }
-        if (sight > 0 && d < 3.3 && !k.hidden && !k.decoy) {
+        if ((sight > 0 || this.lunge) && d < 3.3 && !k.hidden && !k.decoy) {
           this.swingT = 0; this.swingDone = false; this.ch.play('swing', 0.9); g.sfx('swing'); if (!g.race) g.warnSwing(this); break;
         }
+        if (this.lunge && !k.hidden) { this.steer(dt, k.x - this.x, k.z - this.z, 10.5 * base); break; }
         if (sight > 0 && d < 9 && losClear(this.x, this.z, k.x, k.z, w.cols, 0.3)) this.steer(dt, k.x - this.x, k.z - this.z, 8.2 * base * tm);
         else {
           this.repath -= dt;

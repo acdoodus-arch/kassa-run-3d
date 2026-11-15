@@ -12,9 +12,9 @@ const EMOTES = ['කොහෙද දුවන්නේ?', 'හෝටලේ ත�
 export const EMOTE_LIST = EMOTES;
 export const DIFF = {
   easy: { ais: 1, spd: 0.9, vis: 0.8, alert: 0.8, hide: 10, stam: 16, ambush: 55, drain: 0.8, seekers: 2, dmgMul: 0.5 },
-  normal: { ais: 2, spd: 0.95, vis: 0.9, alert: 1.0, hide: 8, stam: 14, ambush: 40, drain: 1, seekers: 3, dmgMul: 0.7 },
-  hard: { ais: 3, spd: 1.1, vis: 1.1, alert: 1.3, hide: 6, stam: 12, ambush: 25, drain: 1.2, seekers: 5, dmgMul: 1 },
-  insane: { ais: 4, spd: 1.3, vis: 1.45, alert: 2, hide: 3.5, stam: 10, ambush: 9, drain: 1.5, seekers: 12, dmgMul: 1.4 },
+  normal: { ais: 1, spd: 0.95, vis: 0.9, alert: 1.0, hide: 8, stam: 14, ambush: 40, drain: 1, seekers: 3, dmgMul: 0.7 },
+  hard: { ais: 1, spd: 1.1, vis: 1.1, alert: 1.3, hide: 6, stam: 12, ambush: 25, drain: 1.2, seekers: 5, dmgMul: 1 },
+  insane: { ais: 1, spd: 1.3, vis: 1.45, alert: 2, hide: 3.5, stam: 10, ambush: 9, drain: 1.5, seekers: 12, dmgMul: 1.4 },
 };
 const SPOT = {
   bush: ['පඳුර', '🌿', 1], dumpster: ['කුණු බඳුන', '🗑️', 0.9], tuk: ['ටුක් ටුක් එක', '🛺', 1], stall: ['කඩේ මේසය', '🍉', 1], shelter: ['බස් නැවතුම', '🚏', 1.1],
@@ -953,7 +953,7 @@ export class Game {
       }
     } else if (this.ambushT <= 0 && this.t > 12 && this.progress < 0.93) this.tryAmbush(idle);
     // Raja's younger brother guards the hotel plaza once Kassa gets close
-    if (!this.junior && this.distHotel < 55 && this.progress > 0.5) {
+    if (false && !this.junior && this.distHotel < 55 && this.progress > 0.5) {   // one Raja only: no extra brothers
       const b1 = this.map.box, ja = Math.random() * 6.28, jp = this.nav.nearestFreePoint(clamp(me.x + Math.sin(ja) * 45, b1.x0 + 8, b1.x1 - 8), clamp(me.z + Math.cos(ja) * 45, b1.z0 + 8, b1.z1 - 8));
       const jr = new RajaAI(this, makeChar('raja', { kind: 'sprinter' }), jp, { style: 'roamer' });
       this.scene.add(jr.ch.root); jr.ch.setName('රජාගේ මල්ලි', '#ff8fa3'); this.junior = jr; this.ais.push(jr); if (this.shadows) this.shadowify(jr.ch.root);
@@ -1239,7 +1239,7 @@ export class Game {
     // effects row
     const fx = []; if (this.boostT > 0) fx.push('⚡'); if (this.disguiseT > 0) fx.push('🎭 ' + Math.ceil(this.disguiseT)); if (this.lives && this.ais.length) { let nd = 1e9; for (const a of this.ais) if (!(a.pending > 0)) nd = Math.min(nd, Math.hypot(a.x - me.x, a.z - me.z)); if (nd < 1e8) fx.push('🔨 රජා ' + Math.round(nd) + 'm'); }
     if (this.coins) fx.push('🪙 ' + this.coins);
-    if (this.role === 'kassa' && this.mode !== 'mp') { let cd2 = 1e9; for (const a of this.ais) if (a.state === 'chase' && a.down <= 0 && a.pending <= 0) cd2 = Math.min(cd2, Math.hypot(a.x - me.x, a.z - me.z)); if (cd2 < 14) fx.push('🚨 රජා ' + Math.round(cd2) + 'm — SPACE = පැන යන්න'); }
+    if (this.role === 'kassa' && this.mode !== 'mp') { let cd2 = 1e9, left = 99; for (const a of this.ais) if (a.state === 'chase' && a.down <= 0 && a.pending <= 0) { cd2 = Math.min(cd2, Math.hypot(a.x - me.x, a.z - me.z)); left = Math.min(left, a.lunge ? 0 : 5 - (a.chaseClock || 0)); } if (cd2 < 14) fx.push('🚨 රජා ' + Math.round(cd2) + 'm — SPACE = පැන යන්න'); if (left < 5) fx.push('⏳ ' + Math.max(0, Math.ceil(left)) + 's හැංගෙන්න!'); }
     if (this.cover) fx.push('👥 සෙනඟ අතර'); if (this.inSmoke) fx.push('💨'); if ((this.terrainMul || 1) < 0.95) fx.push(this.terrainMul < 0.8 ? '🌾 මඩ — වේගය අඩුයි' : '🏖️ වැලි — වේගය අඩුයි'); $('hudFx').textContent = fx.join('  ');
     const qw = $('questWrap');
     if (qw) {
