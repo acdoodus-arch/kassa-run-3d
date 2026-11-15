@@ -77,6 +77,7 @@ export class Game {
     this.phase = 'countdown'; this.ending = false; this.paused = false;
     this.head = o.head || 0; this.roundTime = o.roundTime || 0;
     this.msgT = {}; this.lastRajaWarn = -99; this.hideCount = 0; this.nearHotelSaid = false;
+    this.coins = 0; this.rushT = 5; this.walkNoiseT = 0;
     this.cd = { q: 0, f: 0, r: 0, e: 0, sp: 0 }; this.boostT = 0; this.disguiseT = 0; this.item = null;
     this.stamina = 100; this.stamDelay = 0; this.exhausted = false; this.hotelT = 0; this.hotelHide = null;
     this.hiddenSpot = null; this.hotelSearch = false; this.progress = 0;
@@ -626,9 +627,11 @@ export class Game {
     me.anim = anim;
     this.syncMe(dt, anim);
     // sprint noise (solo AI hears it)
-    if (me.sprinting) { this._noiseT = (this._noiseT || 0) - dt; if (this._noiseT <= 0) { this._noiseT = 0.9; this.addNoise(me.x, me.z, 20, 0.9); } }
+    if (me.sprinting) { this._noiseT = (this._noiseT || 0) - dt; if (this._noiseT <= 0) { this._noiseT = 0.9; this.addNoise(me.x, me.z, 28, 0.9); } }
+    else if (Math.hypot(me.vx, me.vz) > 1.5 && this.mode !== 'mp') { this.walkNoiseT -= dt; if (this.walkNoiseT <= 0) { this.walkNoiseT = 1.5; this.addNoise(me.x, me.z, 7, 0.8); } }
     if (this.phase !== 'run') return;
     this.pickups(dt);
+    this.coinsAndCrowds(dt);
     this.hotelLogic(dt);
     if (me.sprinting || this.boostT > 0) { this.dustT -= dt; if (this.dustT <= 0) { this.dustT = 0.12; this.puffDust(me.x - Math.sin(me.ry) * 0.5, me.z - Math.cos(me.ry) * 0.5); } }
     // random funny lines
@@ -798,6 +801,23 @@ export class Game {
       if (Math.hypot(p.x - me.x, p.z - me.z) < 1.3) {
         p.respawn = 25; this.item = p.type; Audio.sfx('pickup'); this.toast('ගත්තා! ' + ITEM[p.type].i + ' ' + p.name + (this.role === 'kassa' ? ' — SPACE' : ' — E'), '#ffe14d'); if (this.role === 'kassa') this.ch.say(ITEM[p.type].i + ' ඔහ්!', 1.4); break;
       }
+    }
+  }
+
+  // solo: coins on the pavement, and people who walk across the street ahead when Kassa keeps moving
+  coinsAndCrowds(dt) {
+    const me = this.me;
+    if (this.role !== 'kassa' || this.mode === 'mp' || this.race || me.hidden || !this.world.coins) return;
+    for (const c of this.world.coins) if (!c.got && Math.hypot(c.x - me.x, c.z - me.z) < 1.6) { c.got = true; this.coins++; Audio.sfx('pickup'); }
+    this.rushT -= dt;
+    const sp = Math.hypot(me.vx, me.vz);
+    if (this.rushT <= 0 && sp > 2.5) {
+      this.rushT = 7 + Math.random() * 6;
+      const dx = me.vx / sp, dz = me.vz / sp, L = 16, mr = this.map.roadLinesX, mz = this.map.roadLinesZ;
+      const near = (arr, v) => arr.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
+      if (Math.abs(dz) > Math.abs(dx)) this.world.spawnRush(me.z + dz * L, near(mr, me.x), true);      // walking along a street: they cross ahead
+      else this.world.spawnRush(me.x + dx * L, near(mz, me.z), false);
+      this.toast('🚶 ඉදිරියෙන් මිනිස් රැලක්! ඉඩ දෙන්න, නැත්නම් මිශ්‍ර වෙන්න.', '#9fe8ff');
     }
   }
 
@@ -1024,7 +1044,7 @@ export class Game {
       setTimeout(() => c.classList.remove('on'), 2300);
     }
     const delay = won ? 3600 : (reason === 'race' ? 3200 : 2800), rid = this.runId;
-    setTimeout(() => { if (rid !== this.runId || !this.running) return; this.onEnd && this.onEnd({ won, reason, time: Math.max(0, this.t - (this.timerStart || 0)), hides: this.hideCount, hp: Math.round(this.hp), hits: this.hits, tricks: this.tricks, frags: this.quest ? this.quest.got : 0, diff: this.opts.difficulty, mpResult }); }, delay);
+    setTimeout(() => { if (rid !== this.runId || !this.running) return; this.onEnd && this.onEnd({ won, reason, time: Math.max(0, this.t - (this.timerStart || 0)), hides: this.hideCount, hp: Math.round(this.hp), hits: this.hits, tricks: this.tricks, frags: this.quest ? this.quest.got : 0, diff: this.opts.difficulty, coins: this.coins, mpResult }); }, delay);
   }
   // MP: server declared the end of the round
   onServerResult(m) {
@@ -1194,6 +1214,7 @@ export class Game {
     if (this.race && this.role === 'raja') { const be2 = $('b_e'); be2.querySelector('.lbl').textContent = this.item ? ITEM[this.item].i : '🎒 —'; }
     // effects row
     const fx = []; if (this.boostT > 0) fx.push('⚡'); if (this.disguiseT > 0) fx.push('🎭 ' + Math.ceil(this.disguiseT)); if (this.lives && this.ais.length) { let nd = 1e9; for (const a of this.ais) if (!(a.pending > 0)) nd = Math.min(nd, Math.hypot(a.x - me.x, a.z - me.z)); if (nd < 1e8) fx.push('🔨 රජා ' + Math.round(nd) + 'm'); }
+    if (this.coins) fx.push('🪙 ' + this.coins);
     if (this.cover) fx.push('👥 සෙනඟ අතර'); if (this.inSmoke) fx.push('💨'); if ((this.terrainMul || 1) < 0.95) fx.push(this.terrainMul < 0.8 ? '🌾 මඩ — වේගය අඩුයි' : '🏖️ වැලි — වේගය අඩුයි'); $('hudFx').textContent = fx.join('  ');
     const qw = $('questWrap');
     if (qw) {

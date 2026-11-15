@@ -283,7 +283,7 @@ function onGameEnd(r) {
   drawShare({ emoji: won ? '🏆' : '😵', title: won ? tWin : tLose, name: me.profile.name, lines: [`කාලය ${fmtT(t)}`, isRace ? '🏁 හෝටල් රෙස්' : mode === 'daily' ? '📅 දෛනික අභියෝගය' : 'Solo Escape'] });
   showPanel('pResult');
   if (soloRun) {
-    api('/api/solo/finish', { token: me.token, run: soloRun, won, time: t, hides: r.hides, hp: r.hp, hits: r.hits, tricks: r.tricks, frags: r.frags, diff: r.diff }).then(res => {
+    api('/api/solo/finish', { token: me.token, run: soloRun, won, time: t, hides: r.hides, hp: r.hp, hits: r.hits, tricks: r.tricks, frags: r.frags, coins: r.coins, diff: r.diff }).then(res => {
       if (res.ok) { me.profile = res.profile; $('resStats').innerHTML += stat('ලකුණු', '+' + res.score); $('resAch').innerHTML = achHtml(res.ach); if (res.breakdown) $('resScores').innerHTML = res.breakdown.map(b => `<div class="pl"><span class="nm">${esc(b[0])}</span><span class="st ok">${b[1] >= 0 ? '+' : ''}${b[1]}</span></div>`).join('') + `<div class="pl me"><span class="nm">⭐ මුළු ලකුණු</span><span class="st ok">${res.score}</span></div>`; }
       else if (won) $('resWait').textContent = 'ලකුණු සටහන් කළ නොහැකි විය (' + (res.error || '') + ')';
     }).catch(() => {});

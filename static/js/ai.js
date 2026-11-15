@@ -22,7 +22,7 @@ export class RajaAI {
     if (g.mods.includes('night')) range *= 0.8;
     if (g.mods.includes('fog')) range *= 0.6;
     if (d > range) return 0;
-    if (d > 4.5) { const a = Math.abs(angDiff(this.ry, Math.atan2(dx, dz))); if (a > 1.05) return 0; }
+    if (d > 7) { const a = Math.abs(angDiff(this.ry, Math.atan2(dx, dz))); if (a > 1.05) return 0; }   // close range: Raja senses you all round him
     if (!losClear(this.x, this.z, k.x, k.z, this.g.world.cols, 1.7)) return 0;
     if (d > 3 && g.smokeBlocks(this.x, this.z, k.x, k.z)) return 0;
     return 1 - d / range * 0.6;   // closer = faster alert
@@ -33,6 +33,12 @@ export class RajaAI {
     // Raja only ever hunts Kassa: he prowls the streets around him, never the hotel
     const g = this.g, nav = g.nav, rnd = g.rnd, b = g.map.box, k = g.kassaInfo();
     let tx, tz;
+    if (g.progress > 0.3 && rnd() < 0.45) {   // once Kassa is well on his way, Raja cuts him off near the hotel
+      const door = g.map.hotel.door, f = 0.35 + rnd() * 0.35;
+      tx = door[0] + (k.x - door[0]) * f + (rnd() - 0.5) * 10; tz = door[1] + (k.z - door[1]) * f + (rnd() - 0.5) * 10;
+      [tx, tz] = nav.nearestFreePoint(clamp(tx, b.x0 + 8, b.x1 - 8), clamp(tz, b.z0 + 8, b.z1 - 8));
+      return [tx, tz];
+    }
     if (rnd() < 0.6) {
       const a = rnd() * 6.283, r = 8 + rnd() * 28;
       [tx, tz] = nav.nearestFreePoint(clamp(k.x + Math.cos(a) * r, b.x0 + 8, b.x1 - 8), clamp(k.z + Math.sin(a) * r, b.z0 + 8, b.z1 - 8));

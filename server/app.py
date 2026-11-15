@@ -206,7 +206,7 @@ async def api_solo_finish(req):
         t = 0
     won = bool(b.get("won"))
     hides = max(0, min(50, int(b.get("hides", 0) or 0)))
-    sc_total, breakdown = db.solo_score(won, t if won else min(t, elapsed), b.get("hp", 0) or 0, b.get("hits", 0) or 0, b.get("tricks", 0) or 0, hides, b.get("frags", 0) or 0, str(b.get("diff", "hard")))
+    sc_total, breakdown = db.solo_score(won, t if won else min(t, elapsed), b.get("hp", 0) or 0, b.get("hits", 0) or 0, b.get("tricks", 0) or 0, hides, b.get("frags", 0) or 0, str(b.get("diff", "hard")), b.get("coins", 0))
     # plausibility: cannot be faster than the shortest route, cannot claim more time than elapsed
     if won and (t < (14 if run.get("race") else 45) or t > elapsed + 2 or elapsed - t > 900):
         return j({"ok": False, "error": "implausible_time"}, 400)

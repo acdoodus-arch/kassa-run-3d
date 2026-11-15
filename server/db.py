@@ -166,16 +166,17 @@ def calc_score(role, won, t):
 DIFF_MULT = {"easy": 0.8, "normal": 1.0, "hard": 1.3, "insane": 1.6}
 
 
-def solo_score(won, t, hp, hits, tricks, hides, frags, diff):
+def solo_score(won, t, hp, hits, tricks, hides, frags, diff, coins=0):
     """Server-side scoring for solo/daily runs (client values are clamped). Returns (total, breakdown)."""
     m = DIFF_MULT.get(diff, 1.0)
     t = max(0.0, min(float(t), 3600)); hp = max(0, min(int(hp), 100)); hits = max(0, min(int(hits), 60))
     tricks = max(0, min(int(tricks), 60)); hides = max(0, min(int(hides), 60)); frags = max(0, min(int(frags), 3))
+    coins = max(0, min(int(coins or 0), 200))
     if not won:
-        v = int(min(300, t * 1.5) * m)
+        v = int(min(300, t * 1.5) * m) + coins * 10
         return v, [["⏱ දිවි ගලවාගත් කාලය", v]]
     parts = [["🏆 ජයග්‍රහණය", 1000], ["⏱ කාලය", int(max(0, 420 - t) * 4)], ["❤️ ඉතිරි ජීවිතය", hp * 10], ["🌿 හැංගුම්", min(6, hides) * 40],
-             ["🎯 උපක්‍රම", min(8, tricks) * 30], ["🛡️ ගැහුම් නැති", max(0, 250 - hits * 60)], ["🧩 පාස් කොටස්", frags * 100]]
+             ["🎯 උපක්‍රම", min(8, tricks) * 30], ["🛡️ ගැහුම් නැති", max(0, 250 - hits * 60)], ["🧩 පාස් කොටස්", frags * 100], ["🪙 කාසි", coins * 10]]
     sub = sum(p[1] for p in parts)
     total = int(sub * m)
     parts.append(["✖ දුෂ්කරතාව ×%.1f" % m, total - sub])

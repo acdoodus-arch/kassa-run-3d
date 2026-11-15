@@ -169,6 +169,7 @@ export class World {
     this.buildTraffic();
     this.buildPeds();
     this.buildPickups();
+    this.buildCoins();
     this.buildEvents();
     if (this.season && this.season.bunting || this.mods.includes('festival')) this.buildBunting();
     this.mergeStatic();
@@ -1002,10 +1003,19 @@ export class World {
     }
     // vendors standing at stalls
     this.vendors = [];
+    // pooled walkers: crowds that cross the street in front of Kassa (see spawnRush). Solid, so they block him.
+    this.rushPool = [];
+    for (let i = 0; i < 12; i++) {
+      const ch = makeChar('ped', { r: rnd }); this.add(ch.root); ch.root.visible = false;
+      const circ = { x: 0, z: -999, r: 0.38 }; this.dyn.push(circ);
+      const p = { ch, circ, rush: true, active: false, t: 0, x0: 0, z0: 0, x1: 0, z1: 0, len: 1, speed: 2 };
+      this.peds.push(p); this.rushPool.push(p);
+    }
   }
   updatePeds(t) {
     const foc = this.focus || { x: 0, z: 0 };
     for (const p of this.peds) {
+      if (p.rush) continue;   // walkers are driven by updateRushes
       const span = p.b - p.a, per = span / p.sp, k = ((t + p.t0) % (per * 2)) / per;
       const f = k < 1 ? k : 2 - k, s = p.a + f * span, dirn = k < 1 ? 1 : -1;
       const x = p.horiz ? s : p.line, z = p.horiz ? p.line : s;
@@ -1019,6 +1029,45 @@ export class World {
     }
   }
 
+  // a group of people walks across the street at (at) on the line (line); they are solid and block the way
+  spawnRush(line, at, horiz, n = 4) {
+    let k = 0;
+    for (const p of this.rushPool) {
+      if (p.active || k >= n) continue;
+      const off = (k - (n - 1) / 2) * 1.3 + (this.rnd() - 0.5) * 0.4; k++;
+      const a = at - 6.5, b = at + 6.5;
+      if (horiz) { p.x0 = a; p.x1 = b; p.z0 = p.z1 = line + off; } else { p.z0 = a; p.z1 = b; p.x0 = p.x1 = line + off; }
+      p.len = 13; p.speed = 1.9 + this.rnd() * 0.6; p.t = -this.rnd() * 0.9; p.active = true;
+      p.ch.setAnim('walk'); p.ch.speed = 1;
+      p.ch.root.rotation.y = horiz ? (p.x1 > p.x0 ? Math.PI / 2 : -Math.PI / 2) : (p.z1 > p.z0 ? 0 : Math.PI);
+    }
+    return k;
+  }
+  updateRushes(dt) {
+    for (const p of this.rushPool) {
+      if (!p.active) continue;
+      p.t += dt; const f = p.t / (p.len / p.speed);
+      if (f >= 1) { p.active = false; p.ch.root.visible = false; p.circ.x = 0; p.circ.z = -999; continue; }
+      if (f < 0) { p.ch.root.visible = false; p.circ.z = -999; continue; }
+      const x = p.x0 + (p.x1 - p.x0) * f, z = p.z0 + (p.z1 - p.z0) * f;
+      p.ch.root.visible = true; p.ch.root.position.set(x, this.groundY(x, z), z); p.circ.x = x; p.circ.z = z;
+      p.ch.update(dt);
+    }
+  }
+  // coins on the pavements: a little extra reason to explore the streets (solo score)
+  buildCoins() {
+    this.coins = [];
+    const bb = this.bx, hw = this.hw, rnd = this.rnd, ks = this.map.kassaSpawn;
+    const spots = [];
+    for (const l of this.rz) for (let v = bb.x0 + 8; v <= bb.x1 - 8; v += 16) spots.push([v, l + hw + 1.3]);
+    for (const l of this.rx) for (let v = bb.z0 + 8; v <= bb.z1 - 8; v += 16) spots.push([l - hw - 1.3, v]);
+    for (const [x, z] of spots) {
+      if (rnd() < 0.45 || Math.hypot(x - ks[0], z - ks[1]) < 12 || !this.free(x, z, 0.6)) continue;
+      const sp = makeSprite('🪙', { size: 80, color: '#fff', pad: 4, scale: 0.012, depthTest: true }); sp.position.set(x, 1.2, z); this.add(sp);
+      this.coins.push({ x, z, sp, got: false });
+    }
+    this.updaters.push((t) => { for (const c of this.coins) { c.sp.position.y = 1.2 + Math.sin(t * 3 + c.x) * 0.15; c.sp.visible = !c.got; } });
+  }
   buildPickups() {
     const rnd = this.rnd, hw = this.hw;
     const types = [{ k: 'banana', e: '🍌', name: 'කෙසෙල් ලෙල්ල' }, { k: 'vada', e: '🍩', name: 'වඩේ ශක්තිය' }, { k: 'coconut', e: '🥥', name: 'පොල් ගෙඩිය' }, { k: 'smoke', e: '💨', name: 'දුම් බෝම්බය' }, { k: 'decoy', e: '🎭', name: 'ඩමි කස්සා' }, { k: 'lucky', e: '⭐', name: 'වාසනාව' }, { k: 'heal', e: '❤️', name: 'ජීවිතය' }];
@@ -1110,6 +1159,7 @@ export class World {
     this._dt = dt;
     this.updateTraffic(t);
     this.updatePeds(t);
+    this.updateRushes(dt);
     for (const e of this.events) {
       if (!e.done && !e.on && t >= e.t) this.startEvent(e);
       else if (e.on && t >= e.t + e.dur) this.endEvent(e);
