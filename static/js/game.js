@@ -621,7 +621,7 @@ export class Game {
     if (!this.gateOpen) { const gz = this.map.hotel.frontZ + 0.9; if (me.z < gz && this._pz >= gz && Math.abs(me.x) < 3.4) { me.z = gz; me.vz = 0; if (!this._gateT || this.t - this._gateT > 3) { this._gateT = this.t; this.toast('🔒 ' + (this.gateWhy || 'දොර වසා ඇත!'), '#ff7a7a'); Audio.sfx('whistle'); } } }
     this._pz = me.z;
     let anim = 'idle';
-    if (sp > 0.8) anim = me.sneaking ? 'sneak' : (me.sprinting || this.boostT > 0) ? 'sprint' : 'run';
+    if (sp > 0.8) anim = me.sneaking ? 'sneak' : (me.sprinting || this.boostT > 0) ? 'sprint' : (sp > 5.2 ? 'run' : 'walk');
     if (this.nearestOpp < 9 && sp < 0.8 && this.phase === 'run') anim = 'panic';
     me.anim = anim;
     this.syncMe(dt, anim);

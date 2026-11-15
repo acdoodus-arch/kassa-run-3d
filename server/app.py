@@ -22,6 +22,7 @@ def load_secret():
 
 
 SECRET = load_secret()
+ADMIN_USER = os.environ.get("KASSA_ADMIN_USER", "admin").strip() or "admin"
 ADMIN_PW = os.environ.get("KASSA_ADMIN_PASSWORD")
 if not ADMIN_PW:
     pwf = os.path.join(DATA, "admin_password.txt")
@@ -260,7 +261,10 @@ async def api_admin_login(req):
     if n >= 8:
         return j({"error": "locked"}, 429)
     b = await req.json()
-    if hmac.compare_digest(str(b.get("password", "")), ADMIN_PW):
+    ok_user = hmac.compare_digest(str(b.get("username", "")).strip(), ADMIN_USER)
+    ok_pw = hmac.compare_digest(str(b.get("password", "")), ADMIN_PW)
+    if ok_user and ok_pw:
+        login_fail.pop(ip, None)
         return j({"token": admin_token()})
     login_fail[ip] = (n + 1, t0)
     await asyncio.sleep(0.8)
@@ -269,6 +273,21 @@ async def api_admin_login(req):
 
 def admin_ok(req):
     return hmac.compare_digest(req.headers.get("X-Admin-Token", ""), admin_token())
+
+
+async def api_admin_players(req):
+    if not admin_ok(req):
+        return j({"error": "auth"}, 401)
+    q = req.query.get("q", "")[:24]
+    sort = req.query.get("sort", "last_seen")
+    return j({"players": db.admin_players(q, sort, 300)})
+
+
+async def api_admin_player(req):
+    if not admin_ok(req):
+        return j({"error": "auth"}, 401)
+    d = db.admin_player(req.query.get("id", ""))
+    return j(d) if d else j({"error": "not_found"}, 404)
 
 
 async def api_admin_stats(req):
@@ -464,6 +483,8 @@ def make_app():
     r.add_post("/api/error", api_error)
     r.add_post("/api/admin/login", api_admin_login)
     r.add_get("/api/admin/stats", api_admin_stats)
+    r.add_get("/api/admin/players", api_admin_players)
+    r.add_get("/api/admin/player", api_admin_player)
     r.add_static("/", STATIC, show_index=False)
     app.on_startup.append(on_start)
     return app

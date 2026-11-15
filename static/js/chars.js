@@ -73,10 +73,10 @@ const SK = ['#f0c4a0', '#d9a074', '#b97a50', '#8d5a3a', '#6b4128'];
 const PANTS = ['#2b3a55', '#3a3a3a', '#6b5b45', '#1e272e', '#556b8d', '#4a5d3a', '#8b7355'];
 const HAIR = ['#17110d', '#2a1a10', '#3b2a1c', '#4a3a2a', '#6e6e6e'];
 export const SPECS = {
-  kassa: (o = {}) => ({ scale: 0.93, w: 0.88, skin: '#c58a5f', shirt: o.shirt || '#ff7a1a', pants: o.shorts || '#1fa89a', kneeShorts: true, shoes: '#f5f5f5', hat: { color: o.cap || '#ffd23f', brim: true }, glasses: true, pack: '#3a7bd5', hair: '#17110d', nose: true }),
+  kassa: (o = {}) => ({ main: true, ring: '#ffe600', scale: 1.04, w: 0.95, head: 1.14, skin: '#c58a5f', shirt: o.shirt || '#ff1f7a', pants: o.shorts || '#00b8e6', kneeShorts: true, shoes: '#ffffff', hat: { color: o.cap || '#ffe600', brim: true }, glasses: true, pack: '#2b59c3', hair: '#17110d', nose: true }),
   raja: (o = {}) => {
     const v = o.kind || 'raja';
-    const base = { scale: 1.03, w: 1.3, skin: '#9a6039', shirt: '#6a1b9a', pants: '#222633', shoes: '#1a1a1a', hat: { color: '#ffd23f', brim: true, badge: true }, shades: true, mustache: true, belly: 0.6, whistle: true, tool: 'hammer', hair: '#111', nose: true };
+    const base = { main: true, ring: '#ff2d2d', scale: 1.06, w: 1.3, head: 1.08, skin: '#9a6039', shirt: '#c1121f', pants: '#1b1f3a', shoes: '#111111', hat: { color: '#ffd23f', brim: true, badge: true }, shades: true, mustache: true, belly: 0.6, whistle: true, tool: 'hammer', hair: '#111', nose: true };
     if (v === 'sprinter') return { ...base, scale: 0.96, w: 1.0, belly: 0, shirt: '#1faa59', pants: '#f2f2f2', kneeShorts: true, hat: { color: '#ffffff', band: true }, mustache: false };
     if (v === 'scout') return { ...base, scale: 0.98, w: 1.05, belly: 0.15, shirt: '#2aa7c9', pants: '#8b7355', hat: { color: '#f4e3a1', brim: true }, shades: false, glasses: true, pack: '#7a5a2a' };
     if (v === 'bruiser') return { ...base, scale: 1.12, w: 1.6, belly: 0.85, shirt: '#e8590c', pants: '#1d1d1d', hat: { color: '#222', brim: true } };
@@ -97,24 +97,26 @@ export const SPECS = {
 const PEDCOL = ['#e63946', '#f4a261', '#2a9d8f', '#457b9d', '#e9c46a', '#9b5de5', '#06d6a0', '#ef476f', '#ffd166', '#118ab2', '#ffffff', '#8ac926'];
 function pickCol(r) { return PEDCOL[Math.floor(r() * PEDCOL.length)]; }
 
-const JOINTS = ['y', 'lean', 'roll', 'aLx', 'aRx', 'aLz', 'aRz', 'lLx', 'lRx', 'hy', 'hx', 'sy', 'crouch'];
+const JOINTS = ['y', 'lean', 'roll', 'aLx', 'aRx', 'aLz', 'aRz', 'lLx', 'lRx', 'kLx', 'kRx', 'hy', 'hx', 'sy', 'crouch'];
 
 export class Character {
   constructor(spec) {
     this.spec = spec;
     const s = spec, w = s.w, simple = !!s.simple;
-    const mesh = (g, c) => mkMesh(g, c, false);
+    const mesh = (g, c) => mkMesh(g, c, !!s.main, s.main ? 1.12 : 1.09);
     const root = new THREE.Group(); this.root = root;
     const body = new THREE.Group(); body.rotation.order = 'YXZ'; root.add(body); this.body = body;
     const seg = simple ? 7 : 10, pants = s.pants || '#2b3a55', shoes = s.shoes || '#222';
     // legs: thigh + shin + shoe
-    this.legs = [];
+    this.legs = []; this.knees = [];
     for (const side of [1, -1]) {
       const g = new THREE.Group(); g.position.set(side * 0.1 * w, 0.92, 0);
       const th = mesh(new THREE.CylinderGeometry(0.085 * w, 0.066 * w, 0.47, seg), s.dress || pants); th.position.y = -0.235; g.add(th);
-      const sh = mesh(new THREE.CylinderGeometry(0.064 * w, 0.046 * w, 0.43, seg - 1), (s.kneeShorts || s.dress) ? s.skin : pants); sh.position.y = -0.685; g.add(sh);
-      const shoe = mesh(new THREE.BoxGeometry(0.1 * w, 0.07, 0.26), shoes); shoe.position.set(0, -0.885, 0.05); g.add(shoe);
-      body.add(g); this.legs.push(g);
+      // shin + shoe hang from a knee joint (attached after the thigh is merged, see below)
+      const kn = new THREE.Group(); kn.position.y = -0.47;
+      const sh = mesh(new THREE.CylinderGeometry(0.064 * w, 0.046 * w, 0.43, seg - 1), (s.kneeShorts || s.dress) ? s.skin : pants); sh.position.y = -0.215; kn.add(sh);
+      const shoe = mesh(new THREE.BoxGeometry(0.1 * w, 0.07, 0.26), shoes); shoe.position.set(0, -0.415, 0.05); kn.add(shoe);
+      body.add(g); this.legs.push(g); this.knees.push(kn);
     }
     const torso = new THREE.Group(); torso.position.y = 0.92; body.add(torso); this.torso = torso;
     const pelvis = mesh(new THREE.CylinderGeometry(0.165 * w, 0.17 * w, 0.2, 12), s.dress || pants); pelvis.position.y = 0.07; torso.add(pelvis);
@@ -131,7 +133,7 @@ export class Character {
       this.flash = new THREE.PointLight(0xffffff, 0, 8); this.flash.position.set(-0.27 * w, 0.95, 0.5); torso.add(this.flash);
     }
     // head
-    const head = new THREE.Group(); head.position.y = 0.86; torso.add(head); this.head = head;
+    const head = new THREE.Group(); head.position.y = 0.86; head.scale.setScalar(s.head || 1); torso.add(head); this.head = head;
     const skull = mesh(new THREE.SphereGeometry(0.115, simple ? 10 : 16, simple ? 8 : 12), s.skin); skull.scale.set(0.92, 1.1, 1); head.add(skull);
     for (const sd of [1, -1]) { const ear = mesh(new THREE.SphereGeometry(0.024, 6, 5), s.skin); ear.position.set(sd * 0.105, -0.005, 0); ear.scale.set(0.6, 1, 0.9); head.add(ear); }
     if (!simple) {
@@ -179,10 +181,15 @@ export class Character {
       const hd = mesh(new THREE.SphereGeometry(0.05, 8, 6), '#bbb'); hd.position.y = -0.22; mg.add(hd);
       this.arms[1].add(mg);
     }
+    if (s.ring) {
+      const rg = new THREE.Mesh(new THREE.RingGeometry(0.42 * w, 0.62 * w, 28), new THREE.MeshBasicMaterial({ color: s.ring, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+      rg.rotation.x = -Math.PI / 2; rg.position.y = 0.035; rg.renderOrder = 2; root.add(rg); this.marker = rg;
+    }
     root.scale.setScalar(s.scale);
     // fewer draw calls: fuse each rigid part's meshes (per material) while keeping the joints
     root.updateMatrixWorld(true);
     for (const g of [...this.legs, this.head, ...this.arms]) mergeGroup(g);
+    this.legs.forEach((g, i) => g.add(this.knees[i]));
     const loose = torso.children.filter(c => c.isMesh);
     if (loose.length > 2) mergeInto(torso, loose.flatMap(m => collectMeshes(m)), new THREE.Matrix4().copy(torso.matrixWorld).invert());
     if (!s.simple) { this.shadow = blobShadow(0.7 * w); root.add(this.shadow); } else { this.shadow = new THREE.Object3D(); }
@@ -217,12 +224,17 @@ export class Character {
   setAnim(name) { if (this.anim !== name && !this.once) { this.anim = name; this.animT = 0; } }
   target(t) {
     const a = this.anim, s = this.speed, ph = this.phase;
-    const T = { y: 0, lean: 0, roll: 0, aLx: 0, aRx: 0, aLz: 0.08, aRz: 0.08, lLx: 0, lRx: 0, hy: 0, hx: 0, sy: 1, crouch: 0 };
+    const T = { y: 0, lean: 0, roll: 0, aLx: 0, aRx: 0, aLz: 0.08, aRz: 0.08, lLx: 0, lRx: 0, kLx: 0, kRx: 0, hy: 0, hx: 0, sy: 1, crouch: 0 };
     let pitch = 0, spin = 0;
-    const run = (amp, lean, bob) => { const p = Math.sin(ph); T.lLx = p * amp; T.lRx = -p * amp; T.aLx = -p * amp * 0.9; T.aRx = p * amp * 0.9; T.y = Math.abs(p) * bob; T.lean = lean; };
+    const run = (amp, lean, bob) => {
+      const p = Math.sin(ph), q = Math.cos(ph);
+      T.lLx = p * amp; T.lRx = -p * amp; T.aLx = -p * amp * 0.9; T.aRx = p * amp * 0.9;
+      T.kLx = Math.max(0, -q) * amp * 1.1; T.kRx = Math.max(0, q) * amp * 1.1;   // knee bends while the leg swings forward
+      T.y = Math.abs(p) * bob; T.lean = lean; T.roll = p * 0.05 * amp; T.hy = -p * 0.07 * amp;   // hip sway + head counter-sway
+    };
     switch (a) {
       case 'idle': T.y = Math.sin(t * 2) * 0.012; T.aLz = 0.1 + Math.sin(t * 2) * 0.03; T.aRz = T.aLz; T.hy = Math.sin(t * 0.8) * 0.25; break;
-      case 'walk': run(0.7, 0.05, 0.04); break;
+      case 'walk': run(0.62, 0.06, 0.05); break;
       case 'run': run(1.0, 0.2, 0.07); break;
       case 'sprint': run(1.15, 0.38, 0.1); T.aLz = 0.2; T.aRz = 0.2; break;
       case 'sneak': run(0.4, 0.35, 0); T.crouch = 0.35; T.hy = Math.sin(t * 2.4) * 0.6; T.aLx = -0.4; T.aRx = -0.4; break;
@@ -243,7 +255,8 @@ export class Character {
   }
   update(dt) {
     this.animT += dt;
-    this.phase += dt * (this.anim === 'sneak' ? 6 : this.anim === 'sprint' ? 17 : this.anim === 'chase' ? 14 : this.anim === 'panic' ? 16 : this.anim === 'walk' ? 8 : 12);
+    const stride = (this.anim === 'walk' || this.anim === 'run') && this.speed > 1.5;   // real walking speed sets the stride rate
+    this.phase += dt * (stride ? clamp(this.speed * 2.3, 4, 16) : this.anim === 'sneak' ? 6 : this.anim === 'sprint' ? 17 : this.anim === 'chase' ? 14 : this.anim === 'panic' ? 16 : this.anim === 'walk' ? 8 : 12);
     if (this.once) { if (this.animT >= this.once.until) { this.once = null; this.anim = 'idle'; this.animT = 0; } }
     const { T, pitch, spin } = this.target(this.animT);
     const k = Math.min(1, dt * 16), c = this.cur;
@@ -259,6 +272,8 @@ export class Character {
     this.arms[1].rotation.set(c.aRx, 0, -c.aRz);
     const ls = 1 - c.crouch * 0.85;
     this.legs[0].rotation.x = c.lLx; this.legs[1].rotation.x = c.lRx; this.legs[0].scale.y = this.legs[1].scale.y = ls;
+    this.knees[0].rotation.x = c.kLx; this.knees[1].rotation.x = c.kRx;
+    if (this.marker) { const pu = 1 + Math.sin(this.animT * 4) * 0.07; this.marker.scale.set(pu, pu, 1); }
     this.shadow.position.y = 0.04 - b.position.y;
     const sc = 1 - clamp(c.y, 0, 1) * 0.3; this.shadow.scale.set(sc, sc, 1);
     if (this.bubbleT > 0) { this.bubbleT -= dt; if (this.bubbleT <= 0 && this.bubble) this.bubble.visible = false; }

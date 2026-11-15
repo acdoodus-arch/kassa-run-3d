@@ -304,3 +304,29 @@ def admin_stats():
         "errors_today": g("SELECT COUNT(*) FROM errors WHERE ts>=?", (now - 86400,)),
         "failed_sessions": g("SELECT COUNT(*) FROM events WHERE type='mp_forfeit' AND day=?", (today,)),
     }
+
+
+def admin_players(q="", sort="last_seen", limit=200):
+    """Player table for the admin dashboard: totals plus 7-day activity."""
+    cols = {"last_seen": "p.last_seen", "created": "p.created", "games": "p.games", "wins": "p.wins",
+            "score": "p.score", "mp_wins": "p.mp_wins", "name": "p.name_lc"}
+    order = cols.get(sort, "p.last_seen")
+    where, args = "", []
+    if q:
+        where, args = "WHERE p.name_lc LIKE ?", ["%" + q.lower().replace("%", "") + "%"]
+    rows = conn().execute(
+        f"""SELECT p.id, p.name, p.created, p.last_seen, p.games, p.wins, p.escapes, p.catches, p.mp_wins,
+                   p.score, p.best_time, p.skin, (p.ceylon_id IS NOT NULL) AS bus_account,
+                   (SELECT COUNT(*) FROM results r WHERE r.pid = p.id AND r.ts >= ?) AS games_7d
+            FROM players p {where} ORDER BY {order} DESC LIMIT ?""",
+        [time.time() - 7 * 86400, *args, limit]).fetchall()
+    return [dict(r) for r in rows]
+
+
+def admin_player(pid):
+    c = conn()
+    p = c.execute("SELECT id, name, created, last_seen, games, wins, escapes, catches, mp_wins, score, best_time, skin, (ceylon_id IS NOT NULL) AS bus_account FROM players WHERE id=?", (pid,)).fetchone()
+    if not p:
+        return None
+    recent = [dict(r) for r in c.execute("SELECT ts, mode, role, won, time, score, hides, forfeit FROM results WHERE pid=? ORDER BY id DESC LIMIT 25", (pid,))]
+    return {"player": dict(p), "recent": recent}

@@ -9,5 +9,9 @@ out = "netlify-site"
 shutil.rmtree(out, ignore_errors=True)
 shutil.copytree("static", out, ignore=shutil.ignore_patterns("admin.html"))
 open(os.path.join(out, "config.js"), "w").write("window.KASSA_BACKEND = %r;\nwindow.CEYLON_FB = { apiKey: 'AIzaSyD1p-UZ-47ztm7qndWoDlAKW0VcGW2nkHw' };\n" % backend)
-open(os.path.join(out, "netlify.toml"), "w").write('[[headers]]\n  for = "/*"\n  [headers.values]\n    Cache-Control = "no-cache"\n    X-Content-Type-Options = "nosniff"\n')
+open(os.path.join(out, "netlify.toml"), "w").write(
+    '[[headers]]\n  for = "/*"\n  [headers.values]\n    Cache-Control = "no-cache"\n    X-Content-Type-Options = "nosniff"\n'
+    # the admin dashboard lives on the game server: proxy /admin and its API through the site
+    '[[redirects]]\n  from = "/admin"\n  to = "%s/admin"\n  status = 200\n  force = true\n'
+    '[[redirects]]\n  from = "/api/admin/*"\n  to = "%s/api/admin/:splat"\n  status = 200\n  force = true\n' % (backend, backend))
 print("built", out, "-> backend", backend)
